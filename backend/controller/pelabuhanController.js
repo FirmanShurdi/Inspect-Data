@@ -1,5 +1,6 @@
 const { pelabuhan, manifest } = require("../model/association");
 const { Op } = require("sequelize");
+const { recordLog } = require("../helper/logHelper");
 
 const getPelabuhan = async (req, res) => {
   let search = (req.query.search || "").trim();
@@ -42,6 +43,12 @@ const storePelabuhan = async (req, res) => {
     }
 
     const newPelabuhan = await pelabuhan.create({ nama_pelabuhan: nama_pelabuhan.trim() });
+    await recordLog(req, {
+      aksi: "CREATE",
+      entitas: "pelabuhan",
+      keterangan: `Menambah data pelabuhan "${nama_pelabuhan.trim()}"`,
+    });
+
     return res.status(200).json({ msg: "Berhasil menambahkan data pelabuhan", data: newPelabuhan });
   } catch (error) {
     console.error("storePelabuhan Error:", error);
@@ -66,6 +73,12 @@ const updatePelabuhan = async (req, res) => {
     );
 
     if (updatedCount === 0) return res.status(404).json({ msg: "Data tidak ditemukan" });
+
+    await recordLog(req, {
+      aksi: "UPDATE",
+      entitas: "pelabuhan",
+      keterangan: `Mengubah data pelabuhan (ID: ${id}) menjadi "${nama_pelabuhan.trim()}"`,
+    });
 
     return res.status(200).json({ msg: "Berhasil memperbarui data pelabuhan" });
   } catch (error) {
@@ -104,6 +117,12 @@ const deletePelabuhan = async (req, res) => {
     }
 
     await pelabuhan.destroy({ where: { id_pelabuhan: id } });
+    await recordLog(req, {
+      aksi: "DELETE",
+      entitas: "pelabuhan",
+      keterangan: `Menghapus data pelabuhan "${pelabuhanData.nama_pelabuhan}"`,
+    });
+
     return res.status(200).json({ msg: "Berhasil menghapus data pelabuhan" });
   } catch (error) {
     console.error("deletePelabuhan Error:", error);

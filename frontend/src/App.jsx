@@ -17,6 +17,7 @@ import NahkodaMaster from './pages/master/NahkodaMaster';
 import PelabuhanMaster from './pages/master/PelabuhanMaster';
 import SpbAsalMaster from './pages/master/SpbAsalMaster';
 import DaerahMaster from './pages/master/DaerahMaster';
+import LogAktivitas from './pages/log/LogAktivitas';
 
 // React Error Boundary to catch render errors
 class ErrorBoundary extends Component {
@@ -112,6 +113,8 @@ function App() {
               <Route path="/provinsi" element={<DaerahMaster />} />
               <Route path="/kabupaten" element={<DaerahMaster />} />
               <Route path="/kecamatan" element={<DaerahMaster />} />
+              <Route path="/log-aktivitas" element={<LogAktivitas />} />
+              <Route path="/master/log-aktivitas" element={<LogAktivitas />} />
               <Route path="/master/:type" element={<KapalMaster />} />
             </Route>
           </Route>

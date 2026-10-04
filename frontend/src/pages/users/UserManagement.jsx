@@ -44,7 +44,11 @@ export default function UserManagement() {
     setFileFoto(null);
   }, [isUserModalOpen, editUserTarget]);
 
+  const isFetchingRef = React.useRef(false);
+
   const fetchUsers = useCallback(async (query = '') => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setIsLoading(true);
     try {
       const res = await fetch(`/api/users${query ? `?search=${encodeURIComponent(query)}` : ''}`, {
@@ -57,6 +61,7 @@ export default function UserManagement() {
       setToast({ message: err.message || 'Gagal memuat data pengguna', type: 'error' });
     } finally {
       setIsLoading(false);
+      isFetchingRef.current = false;
     }
   }, []);
 

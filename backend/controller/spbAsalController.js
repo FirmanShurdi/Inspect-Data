@@ -1,5 +1,6 @@
 const { spbAsal } = require("../model/association");
 const { Op } = require("sequelize");
+const { recordLog } = require("../helper/logHelper");
 
 const getSpbAsal = async (req, res) => {
   let search = (req.query.search || "").trim();
@@ -63,6 +64,12 @@ const storeSpbAsal = async (req, res) => {
       asal: asal.trim(),
     });
 
+    await recordLog(req, {
+      aksi: "CREATE",
+      entitas: "pelabuhan",
+      keterangan: `Menambah data SPB Asal "${kode_spb.trim()}" (${asal.trim()})`,
+    });
+
     return res.status(200).json({ msg: "SPB Asal berhasil ditambahkan", data: newData });
   } catch (error) {
     console.error("STORE SPB ASAL ERROR:", error);
@@ -102,6 +109,12 @@ const updateSpbAsal = async (req, res) => {
       asal: newAsal,
     });
 
+    await recordLog(req, {
+      aksi: "UPDATE",
+      entitas: "pelabuhan",
+      keterangan: `Mengubah data SPB Asal (ID: ${id}) menjadi "${newKode}" (${newAsal})`,
+    });
+
     return res.status(200).json({ msg: "SPB Asal berhasil diperbarui", data: target });
   } catch (error) {
     console.error("UPDATE SPB ASAL ERROR:", error);
@@ -115,7 +128,16 @@ const deleteSpbAsal = async (req, res) => {
     const target = await spbAsal.findByPk(id);
     if (!target) return res.status(404).json({ msg: "Data SPB Asal tidak ditemukan." });
 
+    const oldKode = target.kode_spb;
+    const oldAsal = target.asal;
     await target.destroy();
+
+    await recordLog(req, {
+      aksi: "DELETE",
+      entitas: "pelabuhan",
+      keterangan: `Menghapus data SPB Asal "${oldKode}" (${oldAsal})`,
+    });
+
     return res.status(200).json({ msg: "SPB Asal berhasil dihapus" });
   } catch (error) {
     console.error("DELETE SPB ASAL ERROR:", error);

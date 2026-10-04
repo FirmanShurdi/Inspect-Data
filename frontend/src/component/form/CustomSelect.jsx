@@ -3,12 +3,19 @@ import { createPortal } from 'react-dom';
 import { Listbox } from '@headlessui/react';
 import { ChevronDown, Check, Search } from 'lucide-react';
 
+const getOptionStyle = (opt, active) => {
+  if (opt.isActive) return 'border-2 border-[#0284C7] rounded-none bg-sky-50/90 my-0.5 font-extrabold text-[#0284C7]';
+  if (active) return 'bg-sky-50 text-[#0284C7]';
+  return 'text-slate-700';
+};
+
 export default function CustomSelect({
   options = [],
   selected,
   onChange,
   placeholder = 'Pilih Opsi',
   searchable = false,
+  alignText = 'left',
   className = '',
 }) {
   const [search, setSearch] = useState('');
@@ -23,35 +30,49 @@ export default function CustomSelect({
   );
   const displayLabel = selectedOption ? selectedOption.label : placeholder;
 
-  const filteredOptions = useMemo(
-    () =>
-      searchable && search.trim()
-        ? options.filter((o) => String(o.label).toLowerCase().includes(search.toLowerCase()))
-        : options,
-    [options, searchable, search]
-  );
+  const filteredOptions = useMemo(() => {
+    if (!searchable || !search.trim()) return options;
+    const query = search.toLowerCase();
+    return options.filter((o) => String(o.label).toLowerCase().includes(query));
+  }, [options, searchable, search]);
 
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
+  useEffect(() => () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
   }, []);
 
   const updateCoords = () => {
-    if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setCoords({
-        top: rect.bottom + 6,
-        left: rect.left,
-        width: rect.width,
-      });
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+
+    let isRotated = false;
+    let curr = buttonRef.current;
+    while (curr && curr !== document.body) {
+      const transform = window.getComputedStyle(curr).transform;
+      if (transform && transform !== 'none' && transform.includes('matrix')) {
+        const b = parseFloat(transform.split(',')[1]);
+        if (Math.abs(b + 1) < 0.25 || Math.abs(b - 1) < 0.25) {
+          isRotated = true;
+          break;
+        }
+      }
+      curr = curr.parentElement;
+    }
+
+    if (isRotated) {
+      const safeLeft = Math.max(12, rect.right + 12);
+      const safeTop = Math.max(12, Math.min(rect.top, window.innerHeight - 260));
+      const safeWidth = Math.min(240, Math.max(160, window.innerWidth - safeLeft - 16));
+      setCoords({ top: safeTop, left: safeLeft, width: safeWidth });
+    } else {
+      const safeLeft = Math.max(12, Math.min(rect.left, window.innerWidth - rect.width - 12));
+      const safeTop = Math.min(rect.bottom + 6, window.innerHeight - 260);
+      setCoords({ top: safeTop, left: safeLeft, width: rect.width });
     }
   };
 
   const handleShow = (label) => {
     if (!label || label === placeholder) return;
     if (timerRef.current) clearTimeout(timerRef.current);
-    updateCoords();
     setTooltip(label);
     timerRef.current = setTimeout(() => setTooltip(null), 2500);
   };
@@ -72,19 +93,16 @@ export default function CustomSelect({
             onTouchStart={() => handleShow(displayLabel)}
             onTouchEnd={handleHide}
             onMouseEnter={() => handleShow(displayLabel)}
-            onMouseLeave={() => {
-              if (timerRef.current) clearTimeout(timerRef.current);
-              setTooltip(null);
-            }}
+            onMouseLeave={handleHide}
             className="relative h-10 sm:h-11 min-w-[100px] max-w-full cursor-pointer rounded-xl border border-slate-300 bg-white px-3 sm:px-3.5 py-2 text-left text-xs sm:text-sm shadow-xs focus:border-[#0284C7] focus:outline-none focus:ring-2 focus:ring-[#0284C7]/20 inline-flex items-center justify-between gap-1.5 sm:gap-2 transition-all w-full"
           >
-            <span className={`block truncate ${selectedOption ? 'text-slate-800 font-semibold' : 'text-slate-400 font-medium'}`}>
+            <span className={`block truncate flex-1 ${alignText === 'center' ? 'text-center' : 'text-left'} ${selectedOption ? 'text-slate-800 font-semibold' : 'text-slate-400 font-medium'}`}>
               {displayLabel}
             </span>
             <ChevronDown className="h-4 w-4 text-slate-500 shrink-0 pointer-events-none" />
           </Listbox.Button>
 
-          {/* Tooltip rendered via portal at z-100000 at exact same position so it sits ON TOP of Listbox.Options (z-99999) */}
+          {/* Tooltip rendered via portal */}
           {tooltip && coords && createPortal(
             <div
               style={{
@@ -101,7 +119,7 @@ export default function CustomSelect({
             document.body
           )}
 
-          {/* Dropdown Options rendered via portal at z-99999 */}
+          {/* Dropdown Options rendered via portal */}
           {open && coords && createPortal(
             <div
               style={{
@@ -111,22 +129,22 @@ export default function CustomSelect({
                 width: `${coords.width}px`,
                 zIndex: 99999,
               }}
-              className="animate-in fade-in zoom-in-95 duration-150"
+              className="animate-in fade-in zoom-in-95 duration-150 text-left"
             >
               <Listbox.Options
                 static
-                className="max-h-60 overflow-auto rounded-2xl border border-slate-200 bg-white py-1 text-xs sm:text-sm shadow-2xl ring-1 ring-black/5 focus:outline-none"
+                className="max-h-60 overflow-auto rounded-2xl border border-slate-200 bg-white py-1 text-xs sm:text-sm shadow-2xl ring-1 ring-black/5 focus:outline-none text-left"
               >
                 {searchable && (
-                  <div className="p-2 border-b border-slate-100 sticky top-0 bg-white z-10">
-                    <div className="relative">
+                  <div className="p-2 border-b border-slate-100 sticky top-0 bg-white z-10 text-left">
+                    <div className="relative text-left">
                       <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                       <input
                         type="text"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         placeholder="Cari..."
-                        className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-[#0284C7] bg-slate-50/50"
+                        className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:outline-none focus:border-[#0284C7] bg-slate-50/50 text-left"
                         onClick={(e) => e.stopPropagation()}
                         onKeyDown={(e) => e.stopPropagation()}
                       />
@@ -143,15 +161,12 @@ export default function CustomSelect({
                       onTouchStart={() => handleShow(opt.label)}
                       onTouchEnd={handleHide}
                       onMouseEnter={() => handleShow(opt.label)}
-                      onMouseLeave={() => {
-                        if (timerRef.current) clearTimeout(timerRef.current);
-                        setTooltip(null);
-                      }}
-                      className={({ active }) => `relative cursor-pointer select-none py-2.5 pl-9 pr-4 ${active ? 'bg-sky-50 text-[#0284C7]' : 'text-slate-700'}`}
+                      onMouseLeave={handleHide}
+                      className={({ active }) => `relative cursor-pointer select-none py-2.5 pl-9 pr-4 text-left transition-all ${getOptionStyle(opt, active)}`}
                     >
                       {({ selected: isSelected }) => (
                         <>
-                          <span className={`block truncate ${isSelected ? 'font-semibold text-[#0284C7]' : 'font-normal'}`}>
+                          <span className={`block truncate text-left ${isSelected ? 'font-semibold text-[#0284C7]' : 'font-normal'}`}>
                             {opt.label}
                           </span>
                           {isSelected && (

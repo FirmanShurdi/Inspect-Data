@@ -15,8 +15,13 @@ const kecamatan = require("./kecamatanModel");
 
 const manifest = require("./manifestModel");
 const penumpang = require("./penumpangModel");
+const penumpangAnak = require("./penumpangAnakModel");
+const logAktivitas = require("./logAktivitasModel");
 
 // Associations / Relations
+logAktivitas.belongsTo(users, { foreignKey: "id_user", as: "user" });
+users.hasMany(logAktivitas, { foreignKey: "id_user", as: "logs" });
+
 kapal.belongsTo(jenis, { foreignKey: "id_jenis", as: "jenis" });
 kapal.belongsTo(asal_kapal, { foreignKey: "id_asal_kapal", as: "asal" });
 
@@ -38,6 +43,13 @@ manifest.belongsTo(pelabuhan, { foreignKey: "id_tempat_singgah", as: "pelabuhan_
 manifest.hasMany(penumpang, { foreignKey: "id_manifest", as: "penumpang_list" });
 penumpang.belongsTo(manifest, { foreignKey: "id_manifest", as: "manifest" });
 
+// Penumpang Anak Associations
+penumpang.hasMany(penumpangAnak, { foreignKey: "id_penumpang", as: "anak_list" });
+penumpangAnak.belongsTo(penumpang, { foreignKey: "id_penumpang", as: "orang_tua" });
+
+manifest.hasMany(penumpangAnak, { foreignKey: "id_manifest", as: "penumpang_anak_list" });
+penumpangAnak.belongsTo(manifest, { foreignKey: "id_manifest", as: "manifest" });
+
 module.exports = {
   users,
   kapal,
@@ -54,4 +66,6 @@ module.exports = {
   kecamatan,
   manifest,
   penumpang,
+  penumpangAnak,
+  logAktivitas,
 };

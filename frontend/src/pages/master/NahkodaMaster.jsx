@@ -19,7 +19,11 @@ export default function NahkodaMaster() {
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
+  const isFetchingRef = React.useRef(false);
+
   const fetchNahkodaData = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setIsLoading(true);
     try {
       const res = await fetch('/api/nahkoda', { headers: getAuthHeader() });
@@ -31,6 +35,7 @@ export default function NahkodaMaster() {
       console.error('Fetch Nahkoda Error:', err);
     } finally {
       setIsLoading(false);
+      isFetchingRef.current = false;
     }
   }, []);
 

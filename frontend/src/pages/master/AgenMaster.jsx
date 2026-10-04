@@ -19,7 +19,11 @@ export default function AgenMaster() {
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
+  const isFetchingRef = React.useRef(false);
+
   const fetchAgenData = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setIsLoading(true);
     try {
       const res = await fetch('/api/agen', { headers: getAuthHeader() });
@@ -31,6 +35,7 @@ export default function AgenMaster() {
       console.error('Fetch Agen Error:', err);
     } finally {
       setIsLoading(false);
+      isFetchingRef.current = false;
     }
   }, []);
 

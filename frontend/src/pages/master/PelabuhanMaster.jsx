@@ -19,7 +19,11 @@ export default function PelabuhanMaster() {
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
+  const isFetchingRef = React.useRef(false);
+
   const fetchPelabuhanData = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setIsLoading(true);
     try {
       const res = await fetch('/api/pelabuhan', { headers: getAuthHeader() });
@@ -31,6 +35,7 @@ export default function PelabuhanMaster() {
       console.error('Fetch Pelabuhan Error:', err);
     } finally {
       setIsLoading(false);
+      isFetchingRef.current = false;
     }
   }, []);
 

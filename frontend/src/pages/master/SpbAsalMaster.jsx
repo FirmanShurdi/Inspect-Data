@@ -19,7 +19,11 @@ export default function SpbAsalMaster() {
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
+  const isFetchingRef = React.useRef(false);
+
   const fetchSpbAsalData = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setIsLoading(true);
     try {
       const res = await fetch('/api/spb-asal', { headers: getAuthHeader() });
@@ -31,6 +35,7 @@ export default function SpbAsalMaster() {
       console.error('Fetch SPB Asal Error:', err);
     } finally {
       setIsLoading(false);
+      isFetchingRef.current = false;
     }
   }, []);
 

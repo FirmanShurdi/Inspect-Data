@@ -37,7 +37,12 @@ export default function KapalMaster() {
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
+  const isFetchingRef = React.useRef(false);
+  const isFetchingDropdownRef = React.useRef(false);
+
   const fetchDropdownOptions = useCallback(async () => {
+    if (isFetchingDropdownRef.current) return;
+    isFetchingDropdownRef.current = true;
     try {
       const headers = getAuthHeader();
       const [resJenis, resAsal] = await Promise.all([
@@ -49,10 +54,14 @@ export default function KapalMaster() {
       if (dAsal?.datas) setAsalOptions(dAsal.datas.map((a) => ({ label: a.nama_asal_kapal, value: a.id_asal_kapal })));
     } catch (err) {
       console.error('Fetch Dropdown Options Error:', err);
+    } finally {
+      isFetchingDropdownRef.current = false;
     }
   }, []);
 
   const fetchData = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setIsLoading(true);
     try {
       const res = await fetch(tabConfig.fetchEndpoint, { headers: getAuthHeader() });
@@ -63,6 +72,7 @@ export default function KapalMaster() {
       setToast({ message: 'Gagal memuat data dari database!', type: 'error' });
     } finally {
       setIsLoading(false);
+      isFetchingRef.current = false;
     }
   }, [tabConfig.fetchEndpoint]);
 

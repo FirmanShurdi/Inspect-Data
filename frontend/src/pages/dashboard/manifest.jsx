@@ -65,7 +65,7 @@ export default function Manifest() {
 
   const handleOpenVerifikasi = useCallback((item) => {
     if (item?.id_manifest) {
-      navigate(`/manifest/verifikasi/${item.id_manifest}`);
+      navigate(`/manifest/verifikasi/${item.id_manifest}`, { state: { from: '/manifest' } });
     }
   }, [navigate]);
 

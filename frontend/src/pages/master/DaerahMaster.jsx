@@ -30,39 +30,89 @@ export default function DaerahMaster() {
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
+  const isFetchingRef = React.useRef(false);
+  const isFetchingDropdownRef = React.useRef(false);
+
   const fetchDropdowns = useCallback(async () => {
+    if (isFetchingDropdownRef.current) return;
+    isFetchingDropdownRef.current = true;
     try {
       const headers = getAuthHeader();
-      const [resNeg, resProv, resKab] = await Promise.all([
-        fetch('/api/negara/all', { headers }),
-        fetch('/api/provinsi/all', { headers }),
-        fetch('/api/kabupaten/all', { headers }),
-      ]);
-      const [dNeg, dProv, dKab] = await Promise.all([resNeg.json(), resProv.json(), resKab.json()]);
-      setDropdownOptions({
-        negara: (dNeg?.datas || []).map((n) => ({ label: n.nama_negara, value: n.id_negara })),
-        provinsi: (dProv?.datas || []).map((p) => ({ label: p.nama_provinsi, value: p.id_provinsi })),
-        kabupaten: (dKab?.datas || []).map((k) => ({ label: k.nama_kabupaten, value: k.id_kabupaten })),
+      const promises = [];
+      const keys = [];
+
+      if (activeTab !== 'negara') {
+        promises.push(fetch('/api/negara/all', { headers }).then((r) => r.json()));
+        keys.push('negara');
+      }
+      if (activeTab !== 'provinsi') {
+        promises.push(fetch('/api/provinsi/all', { headers }).then((r) => r.json()));
+        keys.push('provinsi');
+      }
+      if (activeTab !== 'kabupaten') {
+        promises.push(fetch('/api/kabupaten/all', { headers }).then((r) => r.json()));
+        keys.push('kabupaten');
+      }
+
+      if (promises.length === 0) return;
+
+      const results = await Promise.all(promises);
+      setDropdownOptions((prev) => {
+        const next = { ...prev };
+        results.forEach((resData, idx) => {
+          const key = keys[idx];
+          if (key === 'negara' && resData?.datas) {
+            next.negara = resData.datas.map((n) => ({ label: n.nama_negara, value: n.id_negara }));
+          } else if (key === 'provinsi' && resData?.datas) {
+            next.provinsi = resData.datas.map((p) => ({ label: p.nama_provinsi, value: p.id_provinsi }));
+          } else if (key === 'kabupaten' && resData?.datas) {
+            next.kabupaten = resData.datas.map((k) => ({ label: k.nama_kabupaten, value: k.id_kabupaten }));
+          }
+        });
+        return next;
       });
     } catch (err) {
       console.error('Fetch Dropdowns Error:', err);
+    } finally {
+      isFetchingDropdownRef.current = false;
     }
-  }, []);
+  }, [activeTab]);
 
   const fetchData = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setIsLoading(true);
     try {
       const res = await fetch(tabConfig.fetchEndpoint, { headers: getAuthHeader() });
       if (res.ok) {
         const resData = await res.json();
-        setDataList(resData.datas || resData.data || []);
+        const rawList = resData.datas || resData.data || [];
+        setDataList(rawList);
+
+        if (activeTab === 'negara') {
+          setDropdownOptions((prev) => ({
+            ...prev,
+            negara: rawList.map((n) => ({ label: n.nama_negara, value: n.id_negara })),
+          }));
+        } else if (activeTab === 'provinsi') {
+          setDropdownOptions((prev) => ({
+            ...prev,
+            provinsi: rawList.map((p) => ({ label: p.nama_provinsi, value: p.id_provinsi })),
+          }));
+        } else if (activeTab === 'kabupaten') {
+          setDropdownOptions((prev) => ({
+            ...prev,
+            kabupaten: rawList.map((k) => ({ label: k.nama_kabupaten, value: k.id_kabupaten })),
+          }));
+        }
       }
     } catch (err) {
       console.error('Fetch Data Error:', err);
     } finally {
       setIsLoading(false);
+      isFetchingRef.current = false;
     }
-  }, [tabConfig.fetchEndpoint]);
+  }, [tabConfig.fetchEndpoint, activeTab]);
 
   useEffect(() => {
     fetchData();

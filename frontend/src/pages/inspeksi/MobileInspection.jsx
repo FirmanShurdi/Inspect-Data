@@ -12,7 +12,15 @@ export default function MobileInspection() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  // Inisialisasi isCameraOpen langsung dari location.state.autoOpen atau pemicu tombol Back browser
+  const [isCameraOpen, setIsCameraOpen] = useState(() => {
+    const fromStorage = sessionStorage.getItem('ksop_auto_open_camera_on_back') === 'true';
+    if (fromStorage) {
+      sessionStorage.removeItem('ksop_auto_open_camera_on_back');
+      return true;
+    }
+    return Boolean(location.state?.autoOpen);
+  });
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingStatus, setProcessingStatus] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -31,13 +39,9 @@ export default function MobileInspection() {
 
   const ensureManifestExists = async (kapalObj) => {
     if (!kapalObj) return null;
-    const kapalId = kapalObj.id || kapalObj.value;
-    const storedManifestId = sessionStorage.getItem('ksop_active_manifest_id');
-    const storedKapalId = sessionStorage.getItem('ksop_active_manifest_kapal_id');
-
-    if (storedManifestId && String(storedKapalId) === String(kapalId)) {
-      return storedManifestId;
-    }
+    const rawId = kapalObj.id || kapalObj.value || (typeof kapalObj === 'number' || typeof kapalObj === 'string' ? kapalObj : null);
+    const kapalId = Number(rawId);
+    if (!kapalId || isNaN(kapalId)) return null;
 
     if (isCreatingManifestRef.current) return null;
     isCreatingManifestRef.current = true;
@@ -55,15 +59,17 @@ export default function MobileInspection() {
           tanggal_clearance: new Date().toISOString().split('T')[0],
           pukul_agen_clearance: new Date().toTimeString().split(' ')[0],
           status_pelayaran: 'Pemeriksaan Penumpang',
+          is_auto_scan: true,
         }),
       });
 
       const resData = await res.json();
-      const newManifestId = resData?.data?.id_manifest;
-      if (newManifestId) {
-        sessionStorage.setItem('ksop_active_manifest_id', newManifestId);
+      const manifestData = resData?.data;
+      const manifestId = manifestData?.id_manifest;
+      if (manifestId) {
+        sessionStorage.setItem('ksop_active_manifest_id', manifestId);
         sessionStorage.setItem('ksop_active_manifest_kapal_id', kapalId);
-        return newManifestId;
+        return manifestId;
       }
     } catch (err) {
       console.error('Error creating auto manifest:', err);
@@ -77,7 +83,12 @@ export default function MobileInspection() {
     setSelectedKapal(kapalObj);
     if (kapalObj) {
       sessionStorage.setItem('ksop_selected_kapal', JSON.stringify(kapalObj));
-      ensureManifestExists(kapalObj);
+      const kapalId = kapalObj.id || kapalObj.value;
+      const storedKapalId = sessionStorage.getItem('ksop_active_manifest_kapal_id');
+      if (String(storedKapalId) !== String(kapalId)) {
+        sessionStorage.removeItem('ksop_active_manifest_id');
+        sessionStorage.removeItem('ksop_active_manifest_kapal_id');
+      }
     } else {
       sessionStorage.removeItem('ksop_selected_kapal');
       sessionStorage.removeItem('ksop_active_manifest_id');
@@ -86,8 +97,21 @@ export default function MobileInspection() {
   };
 
   useEffect(() => {
-    if (location.state?.autoOpen) setIsCameraOpen(true);
+    const fromStorage = sessionStorage.getItem('ksop_auto_open_camera_on_back') === 'true';
+    if (fromStorage) {
+      sessionStorage.removeItem('ksop_auto_open_camera_on_back');
+      setIsCameraOpen(true);
+    } else if (location.state?.autoOpen) {
+      setIsCameraOpen(true);
+    }
   }, [location.state]);
+
+  const handleCloseCamera = () => {
+    setIsCameraOpen(false);
+    if (location.state?.autoOpen) {
+      navigate(location.state?.from || '/', { replace: true });
+    }
+  };
 
   useEffect(() => {
     const handleTriggerCamera = () => setIsCameraOpen(true);
@@ -99,10 +123,7 @@ export default function MobileInspection() {
     window.dispatchEvent(
       new CustomEvent('ksop-camera-state', { detail: { isOpen: isCameraOpen } })
     );
-    if (isCameraOpen && selectedKapal) {
-      ensureManifestExists(selectedKapal);
-    }
-  }, [isCameraOpen, selectedKapal]);
+  }, [isCameraOpen]);
 
   const [toast, setToast] = useState({ message: '', type: 'error' });
   const toastTimeoutRef = React.useRef(null);
@@ -180,9 +201,10 @@ export default function MobileInspection() {
                   tanggal_lahir: result.data.tanggalLahir,
                   jenis_kelamin: result.data.jenisKelamin,
                   alamat: result.data.alamat,
+                  is_ai_extract: true,
                 }),
               });
-              showToast(`✨ AI berhasil mengekstrak data KTP (ID: ${savedPenumpangRecord.id_penumpang})`, 'success');
+              showToast(`Berhasil mengekstrak data KTP (ID: ${savedPenumpangRecord.id_penumpang})`, 'success');
             } catch (e) {
               console.error('Update AI result error:', e);
             }

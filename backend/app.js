@@ -7,6 +7,7 @@ const logger = require('morgan');
 const cors = require('cors');
 
 const { db, configDb } = require('./config/db');
+require('./model/association');
 
 // Import Routers
 const indexRouter = require('./routes/index');
@@ -24,6 +25,7 @@ const provinsiRouter = require('./routes/provinsi');
 const kabupatenRouter = require('./routes/kabupaten');
 const kecamatanRouter = require('./routes/kecamatan');
 const penumpangRouter = require('./routes/penumpang');
+const logAktivitasRouter = require('./routes/logAktivitas');
 
 const app = express();
 
@@ -75,6 +77,7 @@ app.use('/api/provinsi', provinsiRouter);
 app.use('/api/kabupaten', kabupatenRouter);
 app.use('/api/kecamatan', kecamatanRouter);
 app.use('/api/penumpang', penumpangRouter);
+app.use('/api/log-aktivitas', logAktivitasRouter);
 
 
 

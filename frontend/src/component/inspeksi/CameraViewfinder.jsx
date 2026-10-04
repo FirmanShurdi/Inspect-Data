@@ -1,7 +1,56 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Camera, RefreshCw, Zap, ZapOff, X, AlertCircle } from 'lucide-react';
 import CustomSelect from '../form/CustomSelect';
 import Flash from '../notif/flash';
+
+let fetchKapalPromise = null;
+
+async function loadKapalOptions() {
+  if (fetchKapalPromise) {
+    return fetchKapalPromise;
+  }
+
+  fetchKapalPromise = (async () => {
+    try {
+      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      const [resK, resM] = await Promise.all([
+        fetch('/api/kapal?simple=true', { headers }),
+        fetch('/api/manifest/today-active-kapal', { headers }),
+      ]);
+
+      const dataK = resK.ok ? await resK.json() : null;
+      const dataM = resM.ok ? await resM.json() : null;
+
+      const kapalList = dataK?.datas || [];
+      const rawActiveIds = dataM?.activeKapalIds || [];
+      const activeKapalIds = new Set(rawActiveIds.map((id) => String(id)));
+
+      const options = kapalList.map((k) => {
+        const isActive = activeKapalIds.has(String(k.id_kapal));
+        return {
+          value: k.id_kapal,
+          label: k.nama_kapal,
+          rawLabel: k.nama_kapal,
+          isActive,
+        };
+      });
+
+      options.sort((a, b) => (b.isActive ? 1 : 0) - (a.isActive ? 1 : 0));
+
+      return options;
+    } catch (err) {
+      console.error('Fetch Kapal Options Error in Camera:', err);
+      return [];
+    } finally {
+      fetchKapalPromise = null;
+    }
+  })();
+
+  return fetchKapalPromise;
+}
 
 export default function CameraViewfinder({
   onCapture = () => {},
@@ -22,26 +71,22 @@ export default function CameraViewfinder({
   const [focusPoint, setFocusPoint] = useState(null);
   const [kapalOptions, setKapalOptions] = useState([]);
 
-  const isKapalSelected = Boolean(selectedKapal?.id || (typeof selectedKapal === 'string' && selectedKapal) || selectedKapal?.nama);
+  const isKapalSelected = Boolean(
+    selectedKapal?.id ||
+    selectedKapal?.value ||
+    (typeof selectedKapal === 'string' && selectedKapal) ||
+    selectedKapal?.nama ||
+    selectedKapal?.label
+  );
 
-  // Load Kapal Options
+  // Load Kapal Options & Prioritize Active Ships with Promise Deduplication
   useEffect(() => {
     let active = true;
-    async function fetchKapal() {
-      try {
-        const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-        const res = await fetch('/api/kapal', {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        const data = await res.json();
-        if (active && res.ok && data?.datas) {
-          setKapalOptions(data.datas.map((k) => ({ value: k.id_kapal, label: k.nama_kapal })));
-        }
-      } catch (err) {
-        console.error('Fetch Kapal Error in Camera:', err);
-      }
-    }
-    fetchKapal();
+
+    loadKapalOptions().then((opts) => {
+      if (active) setKapalOptions(opts);
+    });
+
     return () => { active = false; };
   }, []);
 
@@ -178,12 +223,81 @@ export default function CameraViewfinder({
     const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
 
     // Flash Toast Notification as requested
-    setToast({ message: '✨ gambar tersimpan, data diproses dilatar belakang', type: 'success' });
+    setToast({ message: 'gambar tersimpan, data diproses dilatar belakang', type: 'success' });
 
     // Instantly ensure camera feed keeps running continuously for next scan
     try { video.play(); } catch (e) {}
 
     onCapture(dataUrl);
+  };
+
+  const navigate = useNavigate();
+
+  const handleViewResult = async () => {
+    if (!isKapalSelected) {
+      setToast({ message: 'Harap Pilih Kapal Terlebih Dahulu!', type: 'warning' });
+      return;
+    }
+
+    await stopCamera();
+
+    const kapalId = selectedKapal?.id || (typeof selectedKapal === 'object' ? selectedKapal?.value : null);
+
+    // Simpan pemicu buka kamera otomatis jika pengguna menekan tombol Back browser (Desktop/Mobile)
+    sessionStorage.setItem('ksop_auto_open_camera_on_back', 'true');
+
+    // 1. Check if active manifest ID is already saved in sessionStorage
+    const activeManifestId = sessionStorage.getItem('ksop_active_manifest_id');
+    const activeKapalId = sessionStorage.getItem('ksop_active_manifest_kapal_id');
+    if (activeManifestId && String(activeKapalId) === String(kapalId)) {
+      navigate(`/manifest/verifikasi/${activeManifestId}`, { state: { from: '/inspeksi', fromCamera: true } });
+      return;
+    }
+
+    // 2. Check if a manifest already exists in DB for this ship
+    try {
+      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      const res = await fetch('/api/manifest', { headers });
+      const data = await res.json();
+      if (data?.datas && kapalId) {
+        const found = data.datas.find((m) => String(m.id_kapal) === String(kapalId));
+        if (found?.id_manifest) {
+          sessionStorage.setItem('ksop_active_manifest_id', found.id_manifest);
+          sessionStorage.setItem('ksop_active_manifest_kapal_id', kapalId);
+          navigate(`/manifest/verifikasi/${found.id_manifest}`, { state: { from: '/inspeksi', fromCamera: true } });
+          return;
+        }
+      }
+
+      // 3. If no manifest exists at all for this ship, create one on-demand so we land directly on VerifikasiPenumpang
+      const createRes = await fetch('/api/manifest/store', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+        body: JSON.stringify({
+          id_kapal: kapalId,
+          tanggal_clearance: new Date().toISOString().split('T')[0],
+          pukul_agen_clearance: new Date().toTimeString().split(' ')[0],
+          status_pelayaran: 'Pemeriksaan Penumpang',
+        }),
+      });
+      const createData = await createRes.json();
+      const newId = createData?.data?.id_manifest;
+      if (newId) {
+        sessionStorage.setItem('ksop_active_manifest_id', newId);
+        sessionStorage.setItem('ksop_active_manifest_kapal_id', kapalId);
+        navigate(`/manifest/verifikasi/${newId}`, { state: { from: '/inspeksi', fromCamera: true } });
+        return;
+      }
+    } catch (e) {
+      console.error('Error handling view result navigation:', e);
+    }
+
+    navigate('/manifest');
   };
 
   return (
@@ -222,14 +336,11 @@ export default function CameraViewfinder({
         isKapalSelected={isKapalSelected}
         onCapture={handleCapture}
         onToggleCamera={() => { setFacingMode((p) => (p === 'environment' ? 'user' : 'environment')); setIsTorchOn(false); }}
+        onViewResult={handleViewResult}
       />
     </div>
   );
 }
-
-/** ----------------------------------------------------------------------
- * Modular Sub-Components
- * ---------------------------------------------------------------------- */
 
 function HeaderBar({ onClose, hasTorch, isTorchOn, onToggleTorch, kapalOptions, selectedKapal, onSelectKapal }) {
   return (
@@ -243,17 +354,18 @@ function HeaderBar({ onClose, hasTorch, isTorchOn, onToggleTorch, kapalOptions, 
         <X size={20} />
       </button>
 
-      <div className="flex-1 w-full flex items-center justify-center min-w-0 max-w-[220px] sm:max-w-[300px] landscape:max-w-none landscape:w-36 landscape:rotate-[-90deg] landscape:my-auto shrink-0">
+      <div className="flex-1 w-full flex items-center justify-center min-w-[140px] max-w-[160px] sm:max-w-[300px] landscape:max-w-none landscape:w-36 landscape:rotate-[-90deg] landscape:my-auto shrink-0">
         <CustomSelect
           options={kapalOptions}
           selected={selectedKapal?.id || selectedKapal}
           onChange={(val) => {
             const opt = kapalOptions.find((o) => String(o.value) === String(val));
-            if (opt) onSelectKapal({ id: opt.value, nama: opt.label });
+            if (opt) onSelectKapal({ id: opt.value, nama: opt.rawLabel || opt.label });
           }}
           placeholder="-- Pilih Kapal --"
           searchable={true}
-          className="text-slate-800"
+          alignText="center"
+          className="w-full text-slate-800"
         />
       </div>
 
@@ -296,10 +408,18 @@ function ViewfinderFrame({ isProcessing }) {
   );
 }
 
-function BottomControlBar({ isCameraReady, isProcessing, isKapalSelected, onCapture, onToggleCamera }) {
+function BottomControlBar({ isCameraReady, isProcessing, isKapalSelected, onCapture, onToggleCamera, onViewResult }) {
   return (
     <div className="relative z-20 flex flex-row landscape:flex-col items-center justify-around px-6 py-5 landscape:px-3 landscape:py-6 bg-gradient-to-r landscape:bg-gradient-to-b from-[#0284C7] via-[#0369A1] to-[#0EA5E9] text-white shadow-2xl border-t landscape:border-t-0 landscape:border-l border-sky-300/30 landscape:w-28 landscape:h-full">
-      <div className="w-10 h-10 landscape:w-auto landscape:h-auto" />
+      <button
+        type="button"
+        onClick={onViewResult}
+        className="px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 active:scale-95 transition-all flex flex-col items-center justify-center text-white outline-none cursor-pointer shadow-sm border border-white/20 gap-0.5 min-w-[70px]"
+        title="Lihat Hasil Verifikasi Penumpang"
+      >
+        <span className="text-[10px] font-extrabold tracking-wider uppercase leading-none text-white">Hasil</span>
+        <span className="text-[10px] font-extrabold tracking-wider uppercase leading-none text-white">Inspeksi</span>
+      </button>
 
       <button
         type="button"

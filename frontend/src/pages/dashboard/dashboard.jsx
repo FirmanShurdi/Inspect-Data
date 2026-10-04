@@ -1,7 +1,5 @@
 import React from 'react';
 import StatCards from '../../component/dashboard/StatCards';
-import QuickActions from '../../component/dashboard/QuickActions';
-import RecentInspectionsTable from '../../component/dashboard/RecentInspectionsTable';
 import { Anchor, ShieldCheck } from 'lucide-react';
 
 export default function Dashboard() {
@@ -41,12 +39,6 @@ export default function Dashboard() {
 
       {/* 2. Metric Stat Cards */}
       <StatCards />
-
-      {/* 3. Quick Action Shortcuts */}
-      <QuickActions />
-
-      {/* 4. Recent Inspection Activity Table */}
-      <RecentInspectionsTable />
     </div>
   );
 }

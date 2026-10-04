@@ -1,10 +1,10 @@
 # 🗄️ HASIL INSPEKSI LIVE DATABASE MYSQL `db_calokapal`
 
-*Dokumen ini dibuat otomatis dari hasil query langsung (`SHOW TABLES` & `DESCRIBE`) ke server MySQL lokal.* 
+*Dokumen ini diperbarui secara live via query langsung (`SHOW TABLES` & `DESCRIBE`) ke database MySQL localhost.* 
 
 **Status Koneksi**: 🟢 TERHUBUNG ke `db_calokapal` di `localhost`
 
-## 📊 DAFTAR TABEL DI DATABASE LIVE (14 TABEL)
+## 📊 DAFTAR TABEL DI DATABASE LIVE (17 TABEL)
 
 ### 📋 Tabel: `agen` (Total Data: 11 baris)
 | Field | Type | Null | Key | Default | Extra |
@@ -27,6 +27,15 @@
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `id_jenis` | `int` | NO | PRI | null | auto_increment |
 | `nama_jenis` | `varchar(255)` | YES | - | null | - |
+| `createdAt` | `datetime` | NO | - | null | - |
+| `updatedAt` | `datetime` | NO | - | null | - |
+
+### 📋 Tabel: `kabupaten` (Total Data: 47 baris)
+| Field | Type | Null | Key | Default | Extra |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `id_kabupaten` | `int` | NO | PRI | null | auto_increment |
+| `nama_kabupaten` | `varchar(255)` | YES | UNI | null | - |
+| `id_provinsi` | `int` | YES | MUL | null | - |
 | `createdAt` | `datetime` | NO | - | null | - |
 | `updatedAt` | `datetime` | NO | - | null | - |
 
@@ -56,20 +65,21 @@
 | `createdAt` | `datetime` | NO | - | null | - |
 | `updatedAt` | `datetime` | NO | - | null | - |
 
-### 📋 Tabel: `log_users` (Total Data: 0 baris)
+### 📋 Tabel: `log_aktivitas` (Total Data: 2 baris)
 | Field | Type | Null | Key | Default | Extra |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `id_log_user` | `int` | NO | PRI | null | auto_increment |
-| `waktu` | `time` | YES | - | null | - |
-| `tanggal` | `date` | YES | - | null | - |
+| `id_log` | `int` | NO | PRI | null | auto_increment |
+| `id_user` | `int` | YES | MUL | null | - |
 | `username` | `varchar(255)` | YES | - | null | - |
-| `aksi` | `enum('CREATE','UPDATE','DELETE','LOGIN')` | YES | - | null | - |
-| `jenis_data` | `varchar(255)` | YES | - | null | - |
-| `data_diubah` | `varchar(255)` | YES | - | null | - |
+| `nama_user` | `varchar(255)` | YES | - | null | - |
+| `role` | `varchar(255)` | YES | - | null | - |
+| `aksi` | `varchar(255)` | NO | - | null | - |
+| `entitas` | `varchar(255)` | NO | - | null | - |
+| `keterangan` | `text` | YES | - | null | - |
 | `createdAt` | `datetime` | NO | - | null | - |
 | `updatedAt` | `datetime` | NO | - | null | - |
 
-### 📋 Tabel: `manifest` (Total Data: 0 baris)
+### 📋 Tabel: `manifest` (Total Data: 2 baris)
 | Field | Type | Null | Key | Default | Extra |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `id_manifest` | `int` | NO | PRI | null | auto_increment |
@@ -125,6 +135,45 @@
 | `createdAt` | `datetime` | NO | - | null | - |
 | `updatedAt` | `datetime` | NO | - | null | - |
 
+### 📋 Tabel: `penumpang` (Total Data: 4 baris)
+| Field | Type | Null | Key | Default | Extra |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `id_penumpang` | `int` | NO | PRI | null | auto_increment |
+| `id_manifest` | `int` | NO | - | null | - |
+| `nik` | `varchar(20)` | YES | - | null | - |
+| `nama_penumpang` | `varchar(255)` | YES | - | null | - |
+| `tempat_lahir` | `varchar(100)` | YES | - | null | - |
+| `tanggal_lahir` | `date` | YES | - | null | - |
+| `jenis_kelamin` | `varchar(20)` | YES | - | null | - |
+| `alamat` | `text` | YES | - | null | - |
+| `foto_ktp` | `varchar(255)` | YES | - | null | - |
+| `tipe_penumpang` | `enum('naik','turun')` | YES | - | naik | - |
+| `status_verifikasi` | `enum('pending','selesai')` | NO | - | pending | - |
+| `createdAt` | `datetime` | NO | - | null | - |
+| `updatedAt` | `datetime` | NO | - | null | - |
+
+### 📋 Tabel: `penumpang_anak` (Rancangan Baru - Streamlined)
+| Field | Type | Null | Key | Default | Extra |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `id_anak` | `int` | NO | PRI | null | auto_increment |
+| `id_manifest` | `int` | NO | MUL | null | Foreign Key ke `manifest` |
+| `id_penumpang` | `int` | YES | MUL | null | Foreign Key ke `penumpang` (Boleh NULL jika anak sendiri) |
+| `nama_anak` | `varchar(255)` | NO | - | null | - |
+| `tanggal_lahir` | `date` | YES | - | null | - |
+| `jenis_kelamin` | `enum('LAKI-LAKI','PEREMPUAN')` | YES | - | LAKI-LAKI | - |
+| `createdAt` | `datetime` | NO | - | null | - |
+| `updatedAt` | `datetime` | NO | - | null | - |
+ALTER TABLE `penumpang_anak` ADD COLUMN `foto` VARCHAR(255) NULL AFTER `jenis_kelamin`;
+
+### 📋 Tabel: `provinsi` (Total Data: 18 baris)
+| Field | Type | Null | Key | Default | Extra |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `id_provinsi` | `int` | NO | PRI | null | auto_increment |
+| `nama_provinsi` | `varchar(255)` | YES | UNI | null | - |
+| `id_negara` | `int` | YES | MUL | null | - |
+| `createdAt` | `datetime` | NO | - | null | - |
+| `updatedAt` | `datetime` | NO | - | null | - |
+
 ### 📋 Tabel: `spb` (Total Data: 0 baris)
 | Field | Type | Null | Key | Default | Extra |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -170,3 +219,4 @@
 | `role` | `enum('user','koordinator','superuser')` | YES | - | null | - |
 | `createdAt` | `datetime` | NO | - | null | - |
 | `updatedAt` | `datetime` | NO | - | null | - |
+

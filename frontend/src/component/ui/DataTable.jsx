@@ -23,6 +23,7 @@ export default function DataTable({
   onPageChange,
   totalEntries = null,
   actions = null,
+  filters = null,
   onEdit = null,
   onDelete = null,
   mobileCardRender = null,
@@ -122,22 +123,30 @@ export default function DataTable({
 
   return (
     <div className={`w-full bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden ${className}`}>
-      {/* 1. Header Controls (Search & Actions) */}
-      <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/50">
-        <div className="flex-1 max-w-full sm:max-w-xs order-2 sm:order-1">
-          {searchable && (
-            <SearchBar
-              value={search}
-              onChange={handleSearchChange}
-              onClear={() => handleSearchChange({ target: { value: '' } })}
-              placeholder={searchPlaceholder}
-            />
+      {/* 1. Header Controls (Filters, Search & Actions Unified) */}
+      {(filters || searchable || actions) && (
+        <div className="p-3.5 sm:p-4 border-b border-slate-100 space-y-2.5 bg-slate-50/40">
+          {filters}
+
+          {(searchable || actions) && (
+            <div className={`flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 ${filters ? 'pt-1' : ''}`}>
+              <div className="flex-1 max-w-full sm:max-w-xs order-2 sm:order-1">
+                {searchable && (
+                  <SearchBar
+                    value={search}
+                    onChange={handleSearchChange}
+                    onClear={() => handleSearchChange({ target: { value: '' } })}
+                    placeholder={searchPlaceholder}
+                  />
+                )}
+              </div>
+              <div className="flex items-center justify-end gap-3 shrink-0 order-1 sm:order-2">
+                {actions && <div className="flex items-center gap-2 w-full sm:w-auto justify-end">{actions}</div>}
+              </div>
+            </div>
           )}
         </div>
-        <div className="flex items-center justify-end gap-3 shrink-0 order-1 sm:order-2">
-          {actions && <div className="flex items-center gap-2 w-full sm:w-auto justify-end">{actions}</div>}
-        </div>
-      </div>
+      )}
 
       {/* 2. Main Data View */}
       {isLoading ? (

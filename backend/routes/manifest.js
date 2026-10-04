@@ -4,6 +4,7 @@ const verifyToken = require("../middleware/jwt");
 const {
   getManifest,
   getManifestById,
+  getTodayActiveKapalIds,
   storeManifest,
   updateManifest,
   deleteManifest,
@@ -11,6 +12,7 @@ const {
 
 router.use(verifyToken);
 
+router.get("/today-active-kapal", getTodayActiveKapalIds);
 router.get("/all", getManifest);
 router.get("/", getManifest);
 router.post("/store", storeManifest);

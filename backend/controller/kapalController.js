@@ -1,9 +1,11 @@
 const { kapal, jenis, asal_kapal } = require("../model/association");
 const { Op } = require("sequelize");
+const { recordLog } = require("../helper/logHelper");
 
 // --- KAPAL CRUD ---
 const getKapal = async (req, res) => {
   let search = (req.query.search || "").trim();
+  const isSimple = req.query.simple === "true";
   try {
     const whereClause = search
       ? {
@@ -15,6 +17,15 @@ const getKapal = async (req, res) => {
           ],
         }
       : {};
+
+    if (isSimple) {
+      const datas = await kapal.findAll({
+        attributes: ["id_kapal", "nama_kapal"],
+        order: [["nama_kapal", "ASC"]],
+        where: whereClause,
+      });
+      return res.status(200).json({ msg: "Berhasil mengambil data", datas });
+    }
 
     const datas = await kapal.findAll({
       order: [["id_kapal", "DESC"]],
@@ -67,6 +78,12 @@ const storeKapal = async (req, res) => {
       id_asal_kapal: id_asal_kapal ? Number(id_asal_kapal) : null,
     });
 
+    await recordLog(req, {
+      aksi: "CREATE",
+      entitas: "kapal",
+      keterangan: `Menambah data kapal "${nama_kapal.trim()}"`,
+    });
+
     return res.status(200).json({ msg: "Berhasil menambahkan data kapal", data: newKapal });
   } catch (error) {
     console.error("storeKapal Error:", error);
@@ -96,6 +113,12 @@ const updateKapal = async (req, res) => {
       { where: { id_kapal: req.params.id } }
     );
 
+    await recordLog(req, {
+      aksi: "UPDATE",
+      entitas: "kapal",
+      keterangan: `Mengubah data kapal "${targetKapal.nama_kapal}"`,
+    });
+
     return res.status(200).json({ msg: "Berhasil memperbarui data kapal" });
   } catch (error) {
     console.error("updateKapal Error:", error);
@@ -109,6 +132,13 @@ const deleteKapal = async (req, res) => {
     if (!targetKapal) return res.status(404).json({ msg: "data tidak ditemukan" });
 
     await kapal.destroy({ where: { id_kapal: req.params.id } });
+
+    await recordLog(req, {
+      aksi: "DELETE",
+      entitas: "kapal",
+      keterangan: `Menghapus data kapal "${targetKapal.nama_kapal}"`,
+    });
+
     return res.status(200).json({ msg: "Berhasil menghapus data kapal" });
   } catch (error) {
     console.error("deleteKapal Error:", error);

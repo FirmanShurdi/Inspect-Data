@@ -18,7 +18,7 @@ const NAV_ITEMS_TOP = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
   { name: 'Scan KTP', path: '/inspeksi', icon: QrCode, badge: 'Live' },
   { name: 'Manifest', path: '/manifest', icon: FileText },
-  { name: 'Kelola User', path: '/users', icon: Users },
+  { name: 'Kelola User', path: '/users', icon: Users }
 ];
 
 const MASTER_SUB_ITEMS = [
@@ -27,8 +27,7 @@ const MASTER_SUB_ITEMS = [
   { name: 'Agen', path: '/master/agen' },
   { name: 'Daerah', path: '/master/daerah' },
   { name: 'Pelabuhan', path: '/master/pelabuhan' },
-  { name: 'SPB Asal', path: '/master/spb-asal' },
-];
+  { name: 'SPB Asal', path: '/master/spb-asal' },];
 
 export default function AppSidebar() {
   const { isExpanded, setIsExpanded, isMobileOpen, setIsMobileOpen } = useSidebar();

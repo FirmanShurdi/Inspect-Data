@@ -5,6 +5,7 @@ const bcrypt = require("bcrypt");
 const salt = 10;
 const users = require("../model/userModel");
 const { Op } = require("sequelize");
+const { recordLog } = require("../helper/logHelper");
 
 const login = async (req, res) => {
   try {
@@ -41,6 +42,13 @@ const login = async (req, res) => {
       role: data.role,
       foto: data.foto,
     };
+
+    // Log Login Activity
+    await recordLog({ user: userPayload }, {
+      aksi: 'LOGIN',
+      entitas: 'auth',
+      keterangan: `Pengguna "${userPayload.nama_lengkap || userPayload.username}" berhasil masuk ke sistem`,
+    });
 
     return res.status(200).json({
       msg: "Berhasil login",
@@ -118,7 +126,13 @@ const storeUser = async (req, res) => {
     }
 
     req.body.password = await bcrypt.hash(req.body.password, salt);
-    await users.create({ ...req.body });
+    const newUser = await users.create({ ...req.body });
+
+    await recordLog(req, {
+      aksi: "CREATE",
+      entitas: "user",
+      keterangan: `Menambah pengguna baru "${req.body.nama_lengkap || req.body.username}"`,
+    });
 
     return res.status(200).json({ msg: "Berhasil menambahkan data" });
   } catch (error) {
@@ -169,6 +183,12 @@ const updateUser = async (req, res) => {
 
     await users.update({ ...req.body }, { where: { id_user: req.params.id } });
 
+    await recordLog(req, {
+      aksi: "UPDATE",
+      entitas: "user",
+      keterangan: `Mengubah data pengguna "${targetUser.nama_lengkap || targetUser.username}"`,
+    });
+
     return res.status(200).json({ msg: "Berhasil memperbarui data" });
   } catch (error) {
     console.error("updateUser Error:", error);
@@ -193,6 +213,12 @@ const changePassword = async (req, res) => {
 
     await users.update({ password: hashedPassword }, { where: { id_user: req.user.id } });
 
+    await recordLog(req, {
+      aksi: "UPDATE",
+      entitas: "user",
+      keterangan: `Pengguna "${data.nama_lengkap || data.username}" mengubah password akun`,
+    });
+
     return res.status(200).json({ msg: "berhasil mengubah password" });
   } catch (error) {
     console.log(error);
@@ -214,6 +240,12 @@ const deleteUser = async (req, res) => {
     let result = await users.destroy({ where: { id_user: req.params.id } });
 
     if (result == 0) return res.status(404).json({ msg: "data tidak ditemukan" });
+
+    await recordLog(req, {
+      aksi: "DELETE",
+      entitas: "user",
+      keterangan: `Menghapus pengguna "${data.nama_lengkap || data.username}"`,
+    });
 
     return res.status(200).json({ msg: "Berhasil menghapus data" });
   } catch (error) {

@@ -1,5 +1,6 @@
 const { kabupaten, provinsi, kecamatan } = require("../model/association");
 const { Op } = require("sequelize");
+const { recordLog } = require("../helper/logHelper");
 
 const getKabupaten = async (req, res) => {
   let search = (req.query.search || "").trim();
@@ -26,6 +27,11 @@ const storeKabupaten = async (req, res) => {
       nama_kabupaten: nama_kabupaten.trim(),
       id_provinsi: id_provinsi || null,
     });
+    await recordLog(req, {
+      aksi: "CREATE",
+      entitas: "daerah",
+      keterangan: `Menambah data kabupaten/kota "${nama_kabupaten.trim()}"`,
+    });
     return res.status(200).json({ msg: "Berhasil menambahkan data kabupaten/kota", data: newKab });
   } catch (error) {
     console.error("STORE KABUPATEN ERROR:", error);
@@ -46,6 +52,12 @@ const updateKabupaten = async (req, res) => {
     );
     if (updatedCount === 0) return res.status(404).json({ msg: "Data tidak ditemukan" });
 
+    await recordLog(req, {
+      aksi: "UPDATE",
+      entitas: "daerah",
+      keterangan: `Mengubah data kabupaten/kota (ID: ${id}) menjadi "${nama_kabupaten.trim()}"`,
+    });
+
     return res.status(200).json({ msg: "Berhasil memperbarui data kabupaten/kota" });
   } catch (error) {
     console.error("UPDATE KABUPATEN ERROR:", error);
@@ -64,6 +76,12 @@ const deleteKabupaten = async (req, res) => {
     if (countKec > 0) return res.status(400).json({ msg: `Kabupaten '${target.nama_kabupaten}' tidak dapat dihapus karena digunakan pada ${countKec} kecamatan.` });
 
     await target.destroy();
+    await recordLog(req, {
+      aksi: "DELETE",
+      entitas: "daerah",
+      keterangan: `Menghapus data kabupaten/kota "${target.nama_kabupaten}"`,
+    });
+
     return res.status(200).json({ msg: "Berhasil menghapus data kabupaten/kota" });
   } catch (error) {
     console.error("DELETE KABUPATEN ERROR:", error);
