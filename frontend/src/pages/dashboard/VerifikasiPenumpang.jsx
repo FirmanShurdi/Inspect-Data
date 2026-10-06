@@ -250,7 +250,7 @@ export default function VerifikasiPenumpang() {
             <UserCheck size={22} className="text-[#0284C7]" /> Verifikasi Penumpang
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Kapal: <strong className="text-slate-800 uppercase">{manifest?.nama_kapal || manifest?.kapal?.nama_kapal || '-'}</strong> | SPB: <strong className="text-slate-800">{manifest?.no_spb || manifest?.spb?.no_spb || '-'}</strong>
+            Kapal: <strong className="text-slate-800 uppercase">{manifest?.nama_kapal || manifest?.kapal?.nama_kapal || '-'}</strong>
           </p>
         </div>
 

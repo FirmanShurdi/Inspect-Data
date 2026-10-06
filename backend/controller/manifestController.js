@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { manifest, kapal, nahkoda, agen, pelabuhan, spb, penumpang, penumpangAnak } = require("../model/association");
+const { manifest, kapal, nahkoda, pelabuhan, spb, penumpang, penumpangAnak } = require("../model/association");
 const { Op } = require("sequelize");
 const { recordLog } = require("../helper/logHelper");
 
@@ -18,7 +18,6 @@ const formatManifestItem = (m) => {
 
   return {
     ...plain,
-    no_spb: plain.spb?.no_spb || plain.no_spb || "",
     no_spb_asal: plain.spb?.no_spb_asal || plain.no_spb_asal || "",
     total_penumpang: totalPassengers,
     count_pending: countPending,
@@ -45,7 +44,6 @@ const getManifest = async (req, res) => {
       include: [
         { model: kapal, as: "kapal" },
         { model: nahkoda, as: "nahkoda" },
-        { model: agen, as: "agen" },
         { model: spb, as: "spb" },
         { model: pelabuhan, as: "pelabuhan_asal" },
         { model: pelabuhan, as: "pelabuhan_sandar" },
@@ -71,7 +69,6 @@ const getManifestById = async (req, res) => {
       include: [
         { model: kapal, as: "kapal" },
         { model: nahkoda, as: "nahkoda" },
-        { model: agen, as: "agen" },
         { model: spb, as: "spb" },
         { model: pelabuhan, as: "pelabuhan_asal" },
         { model: pelabuhan, as: "pelabuhan_sandar" },
@@ -95,7 +92,7 @@ const storeManifest = async (req, res) => {
   try {
     const body = { ...req.body };
     const rawKapalId = body.id_kapal;
-    const { no_spb, no_spb_asal } = body;
+    const { no_spb_asal } = body;
 
     // Normalisasi id_kapal menjadi tipe Integer murni
     const kapalIdNum =
@@ -141,10 +138,9 @@ const storeManifest = async (req, res) => {
     }
 
     // Handle SPB creation jika belum ada
-    if (no_spb || no_spb_asal) {
+    if (no_spb_asal) {
       const spbRecord = await spb.create({
-        no_spb: no_spb ? String(no_spb).trim() : null,
-        no_spb_asal: no_spb_asal ? String(no_spb_asal).trim() : null,
+        no_spb_asal: String(no_spb_asal).trim(),
       });
       body.id_spb = spbRecord.id_spb;
     }
@@ -179,20 +175,17 @@ const updateManifest = async (req, res) => {
     if (!target) return res.status(404).json({ msg: "Data manifest tidak ditemukan" });
 
     const body = { ...req.body };
-    const { no_spb, no_spb_asal } = body;
-
-    if (no_spb !== undefined || no_spb_asal !== undefined) {
+    const { no_spb_asal } = body;
+    if (no_spb_asal !== undefined) {
       if (target.id_spb) {
         await spb.update(
           {
-            no_spb: no_spb ? String(no_spb).trim() : undefined,
             no_spb_asal: no_spb_asal ? String(no_spb_asal).trim() : undefined,
           },
           { where: { id_spb: target.id_spb } }
         );
       } else {
         const newSpb = await spb.create({
-          no_spb: no_spb ? String(no_spb).trim() : null,
           no_spb_asal: no_spb_asal ? String(no_spb_asal).trim() : null,
         });
         body.id_spb = newSpb.id_spb;

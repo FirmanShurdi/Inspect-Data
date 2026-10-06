@@ -9,10 +9,6 @@ const spb = db.define(
       primaryKey: true,
       autoIncrement: true,
     },
-    no_spb: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
     no_spb_asal: {
       type: DataTypes.STRING,
       allowNull: true,

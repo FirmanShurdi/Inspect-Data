@@ -12,7 +12,6 @@ import Manifest from './pages/dashboard/manifest';
 import FormManifest from './pages/dashboard/formManifest';
 import DetailManifest from './pages/dashboard/detailmanifest';
 import VerifikasiPenumpang from './pages/dashboard/VerifikasiPenumpang';
-import AgenMaster from './pages/master/AgenMaster';
 import NahkodaMaster from './pages/master/NahkodaMaster';
 import PelabuhanMaster from './pages/master/PelabuhanMaster';
 import SpbAsalMaster from './pages/master/SpbAsalMaster';
@@ -37,7 +36,7 @@ class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-[#F0F9FF] flex flex-col items-center justify-center p-6 text-center">
+        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
           <div className="bg-white p-8 rounded-3xl shadow-lg border border-slate-200 max-w-md w-full">
             <h1 className="text-xl font-bold text-slate-800 mb-2">Terjadi Kesalahan Tampilan</h1>
             <p className="text-xs text-slate-500 mb-4">{this.state.error?.message || 'Aplikasi membutuhkan muat ulang.'}</p>
@@ -99,8 +98,6 @@ function App() {
               <Route path="/manifest/edit/:id" element={<FormManifest />} />
               <Route path="/manifest/detail/:id" element={<DetailManifest />} />
               <Route path="/manifest/verifikasi/:id" element={<VerifikasiPenumpang />} />
-              <Route path="/agen" element={<AgenMaster />} />
-              <Route path="/master/agen" element={<AgenMaster />} />
               <Route path="/nahkoda" element={<NahkodaMaster />} />
               <Route path="/master/nahkoda" element={<NahkodaMaster />} />
               <Route path="/pelabuhan" element={<PelabuhanMaster />} />
@@ -122,7 +119,7 @@ function App() {
           <Route
             path="*"
             element={
-              <div className="flex h-screen flex-col items-center justify-center bg-[#F0F9FF]">
+              <div className="flex h-screen flex-col items-center justify-center bg-slate-50">
                 <h1 className="text-4xl font-bold text-[#0284C7]">404</h1>
                 <p className="text-lg text-gray-600 mt-2">Halaman Tidak Ditemukan</p>
               </div>

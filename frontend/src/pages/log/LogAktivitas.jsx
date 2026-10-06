@@ -50,11 +50,12 @@ export default function LogAktivitas() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  const fetchLogData = useCallback(async () => {
+  const fetchLogData = useCallback(async (signal) => {
     setIsLoading(true);
     try {
       const token = sessionStorage.getItem('token') || localStorage.getItem('token');
       const res = await fetch('/api/log-aktivitas', {
+        signal,
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const resData = await res.json().catch(() => ({}));
@@ -64,16 +65,23 @@ export default function LogAktivitas() {
         setDataList([]);
         setToast({ message: resData.msg || 'Gagal mengambil data log dari server.', type: 'error' });
       }
-    } catch {
-      setDataList([]);
-      setToast({ message: 'Gagal terhubung ke server log aktivitas.', type: 'error' });
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        setDataList([]);
+        setToast({ message: 'Gagal terhubung ke server log aktivitas.', type: 'error' });
+      }
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchLogData();
+    const controller = new AbortController();
+    fetchLogData(controller.signal);
+
+    return () => {
+      controller.abort();
+    };
   }, [fetchLogData]);
 
   // Dynamic Options derived from dataList

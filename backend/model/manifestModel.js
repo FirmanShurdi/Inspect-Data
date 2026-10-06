@@ -23,7 +23,6 @@ const manifest = db.define(
     id_tujuan_akhir: DataTypes.INTEGER,
     id_tolak: DataTypes.INTEGER,
     id_sandar: DataTypes.INTEGER,
-    id_agen: DataTypes.INTEGER,
     tanggal_clearance: DataTypes.DATEONLY,
     pukul_agen_clearance: DataTypes.TIME,
     pukul_kapal_berangkat: DataTypes.STRING,

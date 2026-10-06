@@ -3,6 +3,40 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Edit3, Trash2, Printer } from 'lucide-react';
 import Flash from '../../component/notif/flash';
 
+const getAuthHeader = () => {
+  const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return '-';
+  try {
+    const clean = dateStr.split('T')[0];
+    const parts = clean.split('-');
+    if (parts.length === 3) {
+      const months = [
+        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      ];
+      const day = parseInt(parts[2], 10);
+      const month = months[parseInt(parts[1], 10) - 1] || parts[1];
+      const year = parts[0];
+      return `${day} ${month} ${year}`;
+    }
+    return clean;
+  } catch (e) {
+    return dateStr;
+  }
+};
+
+const TABS = [
+  { key: 'barang_datang', label: 'Barang Datang' },
+  { key: 'barang_berangkat', label: 'Barang Berangkat' },
+  { key: 'kendaraan_datang', label: 'Kendaraan Datang' },
+  { key: 'kendaraan_berangkat', label: 'Kendaraan Berangkat' },
+  { key: 'penumpang', label: 'Penumpang' },
+];
+
 export default function DetailManifest() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -11,11 +45,6 @@ export default function DetailManifest() {
   const [isLoading, setIsLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [activeTab, setActiveTab] = useState('penumpang');
-
-  const getAuthHeader = () => {
-    const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  };
 
   const fetchDetail = useCallback(async () => {
     setIsLoading(true);
@@ -57,27 +86,6 @@ export default function DetailManifest() {
     }
   };
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '-';
-    try {
-      const clean = dateStr.split('T')[0];
-      const parts = clean.split('-');
-      if (parts.length === 3) {
-        const months = [
-          'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-          'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-        ];
-        const day = parseInt(parts[2], 10);
-        const month = months[parseInt(parts[1], 10) - 1] || parts[1];
-        const year = parts[0];
-        return `${day} ${month} ${year}`;
-      }
-      return clean;
-    } catch (e) {
-      return dateStr;
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[300px] text-slate-500 text-[14px] font-medium">
@@ -92,7 +100,7 @@ export default function DetailManifest() {
         <p className="text-slate-500 text-[14px]">Data Manifest tidak ditemukan.</p>
         <button
           onClick={() => navigate('/manifest')}
-          className="px-4 py-2 bg-[#0284C7] text-white text-[13px] font-semibold rounded-xl"
+          className="px-4 py-2 bg-[#0284C7] text-white text-[13px] font-semibold rounded-xl cursor-pointer"
         >
           Kembali ke Manifest
         </button>
@@ -100,19 +108,11 @@ export default function DetailManifest() {
     );
   }
 
-  const tabs = [
-    { key: 'barang_datang', label: 'Barang Datang' },
-    { key: 'barang_berangkat', label: 'Barang Berangkat' },
-    { key: 'kendaraan_datang', label: 'Kendaraan Datang' },
-    { key: 'kendaraan_berangkat', label: 'Kendaraan Berangkat' },
-    { key: 'penumpang', label: 'Penumpang' },
-  ];
-
   return (
     <div className="space-y-6 font-sans">
       <Flash toast={toast} onClose={() => setToast(null)} />
 
-      {/* TOP BAR / BACK LINK - KEPT AT ORIGINAL SIZES AS REQUESTED */}
+      {/* TOP BAR / BACK LINK */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <button
@@ -123,7 +123,7 @@ export default function DetailManifest() {
             <span>Kembali ke Daftar Clearance</span>
           </button>
           <h1 className="text-[22px] font-bold text-slate-900 tracking-tight">
-            Detail SPB: {data.no_spb || data.spb?.no_spb || '-'}
+            Detail Manifest Pelayaran
           </h1>
         </div>
 
@@ -156,16 +156,12 @@ export default function DetailManifest() {
         </div>
       </div>
 
-      {/* CARD 1: INFORMASI UMUM & KAPAL (+1px ENLARGED) */}
+      {/* CARD 1: INFORMASI UMUM & KAPAL */}
       <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-6">
         <h2 className="text-[18px] font-bold text-slate-900">Informasi Umum & Kapal</h2>
 
         {/* ROW 1: CLEARANCE INFO */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 text-[14px]">
-          <div>
-            <p className="text-slate-400 font-normal mb-1 text-[14px]">Jenis PPK</p>
-            <p className="font-bold text-slate-800 text-[14px]">{data.ppk || '-'}</p>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 text-[14px]">
           <div>
             <p className="text-slate-400 font-normal mb-1 text-[14px]">Nomor Register</p>
             <p className="font-bold text-slate-800 text-[14px]">{data.no_urut || '-'}</p>
@@ -190,7 +186,7 @@ export default function DetailManifest() {
         <hr className="border-slate-100" />
 
         {/* ROW 2: KAPAL INFO */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 text-[14px]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 text-[14px]">
           <div>
             <p className="text-slate-400 font-normal mb-1 text-[14px]">Nama Kapal</p>
             <p className="font-bold text-slate-800 text-[14px] uppercase">{data.nama_kapal || data.kapal?.nama_kapal || '-'}</p>
@@ -203,14 +199,10 @@ export default function DetailManifest() {
             <p className="text-slate-400 font-normal mb-1 text-[14px]">Jumlah Crew</p>
             <p className="font-bold text-slate-800 text-[14px]">{data.jumlah_crew ?? '-'}</p>
           </div>
-          <div>
-            <p className="text-slate-400 font-normal mb-1 text-[14px]">Agen</p>
-            <p className="font-bold text-slate-800 text-[14px] uppercase">{data.nama_agen || data.agen?.nama_agen || '-'}</p>
-          </div>
         </div>
       </div>
 
-      {/* CARD 2: INFORMASI PERJALANAN (+1px ENLARGED) */}
+      {/* CARD 2: INFORMASI PERJALANAN */}
       <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-6">
         <h2 className="text-[18px] font-bold text-slate-900">Informasi Perjalanan</h2>
 
@@ -274,11 +266,11 @@ export default function DetailManifest() {
         </div>
       </div>
 
-      {/* CARD 3: TABEL PENUMPANG (+1px ENLARGED) */}
+      {/* CARD 3: TABEL PENUMPANG */}
       <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs">
         {/* TABS HEADER */}
         <div className="flex items-center gap-6 px-6 border-b border-slate-200 overflow-x-auto">
-          {tabs.map((tab) => (
+          {TABS.map((tab) => (
             <button
               key={tab.key}
               type="button"

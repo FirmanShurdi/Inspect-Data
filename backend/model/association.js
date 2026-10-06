@@ -2,7 +2,6 @@ const users = require("./userModel");
 const kapal = require("./kapalModel");
 const jenis = require("./jenisModel");
 const asal_kapal = require("./asalKapalModel");
-const agen = require("./agenModel");
 const nahkoda = require("./nahkodaModel");
 const pelabuhan = require("./pelabuhanModel");
 const spbAsal = require("./spbAsalModel");
@@ -31,7 +30,6 @@ kecamatan.belongsTo(kabupaten, { foreignKey: "id_kabupaten", as: "kabupaten" });
 
 manifest.belongsTo(kapal, { foreignKey: "id_kapal", as: "kapal" });
 manifest.belongsTo(nahkoda, { foreignKey: "id_nahkoda", as: "nahkoda" });
-manifest.belongsTo(agen, { foreignKey: "id_agen", as: "agen" });
 manifest.belongsTo(spb, { foreignKey: "id_spb", as: "spb" });
 
 manifest.belongsTo(pelabuhan, { foreignKey: "id_datang_dari", as: "pelabuhan_asal" });
@@ -55,7 +53,6 @@ module.exports = {
   kapal,
   jenis,
   asal_kapal,
-  agen,
   nahkoda,
   pelabuhan,
   spbAsal,

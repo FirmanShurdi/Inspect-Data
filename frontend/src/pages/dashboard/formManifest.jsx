@@ -7,9 +7,7 @@ import InputField from '../../component/form/InputField';
 import Select from '../../component/form/Select';
 
 const INITIAL_FORM = {
-  ppk: '',
   no_urut: '',
-  no_spb: '',
   no_spb_asal: '',
   tanggal_clearance: '',
   pukul_agen_clearance: '',
@@ -25,7 +23,6 @@ const INITIAL_FORM = {
   tanggal_berangkat: '',
   pukul_kapal_berangkat: '',
   id_tempat_singgah: '',
-  id_agen: '',
 };
 
 const getAuthHeader = () => {
@@ -55,31 +52,40 @@ export default function FormManifest() {
     kapal: [],
     nahkoda: [],
     pelabuhan: [],
-    agen: [],
     spbAsal: [],
   });
 
-  // Fetch all dropdown options in parallel
+  // Fetch all dropdown options in parallel with safe single-read JSON parsing
   const fetchDropdowns = useCallback(async () => {
     try {
       const headers = getAuthHeader();
-      const [resKapal, resNahkoda, resPelabuhan, resAgen, resSpbAsal] = await Promise.allSettled([
+      const [resKapal, resNahkoda, resPelabuhan, resSpbAsal] = await Promise.allSettled([
         fetch('/api/kapal/all', { headers }).then((r) => (r.ok ? r : fetch('/api/kapal', { headers }))),
         fetch('/api/nahkoda/all', { headers }),
         fetch('/api/pelabuhan/all', { headers }),
-        fetch('/api/agen/all', { headers }),
         fetch('/api/spb-asal/all', { headers }),
       ]);
 
-      const parse = async (res) => (res.status === 'fulfilled' && res.value.ok ? (await res.value.json()).datas || (await res.value.json()).data || [] : []);
+      const parse = async (res) => {
+        if (res.status === 'fulfilled' && res.value?.ok) {
+          try {
+            const data = await res.value.json();
+            return data.datas || data.data || [];
+          } catch (e) {
+            return [];
+          }
+        }
+        return [];
+      };
 
-      setOptions({
-        kapal: await parse(resKapal),
-        nahkoda: await parse(resNahkoda),
-        pelabuhan: await parse(resPelabuhan),
-        agen: await parse(resAgen),
-        spbAsal: await parse(resSpbAsal),
-      });
+      const [kapal, nahkoda, pelabuhan, spbAsal] = await Promise.all([
+        parse(resKapal),
+        parse(resNahkoda),
+        parse(resPelabuhan),
+        parse(resSpbAsal),
+      ]);
+
+      setOptions({ kapal, nahkoda, pelabuhan, spbAsal });
     } catch (err) {
       console.error('Fetch Dropdowns Error:', err);
     }
@@ -158,11 +164,6 @@ export default function FormManifest() {
 
   // Formatted options map
   const selectOpts = useMemo(() => ({
-    ppk: [
-      { value: '', label: 'Pilih Jenis PPK' },
-      { value: '27', label: '27' },
-      { value: '29', label: '29' },
-    ],
     spbAsal: [
       { value: '', label: 'Pilih atau ketik No SPB Asal...' },
       ...options.spbAsal.map((s) => ({
@@ -181,10 +182,6 @@ export default function FormManifest() {
     pelabuhan: [
       { value: '', label: 'Pilih Pelabuhan' },
       ...options.pelabuhan.map((p) => ({ value: p.id_pelabuhan, label: p.nama_pelabuhan })),
-    ],
-    agen: [
-      { value: '', label: 'Pilih Agen' },
-      ...options.agen.map((a) => ({ value: a.id_agen, label: a.nama_agen })),
     ],
   }), [options]);
 
@@ -228,22 +225,16 @@ export default function FormManifest() {
             <span>Data Clearance</span>
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FormField label="Jenis PPK">
-              <Select name="ppk" value={formData.ppk} onChange={handleChange} options={selectOpts.ppk} placeholder="Pilih Jenis PPK" />
-            </FormField>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField label="Nomor Register">
               <InputField type="text" name="no_urut" value={formData.no_urut} onChange={handleChange} placeholder="Nomor Register" />
             </FormField>
-            <FormField label="Nomor SPB">
-              <InputField type="text" name="no_spb" value={formData.no_spb} onChange={handleChange} placeholder="0023403" />
-            </FormField>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormField label="No SPB Asal">
               <Select name="no_spb_asal" value={formData.no_spb_asal} onChange={handleChange} options={selectOpts.spbAsal} placeholder="Pilih atau ketik No SPB Asal..." />
             </FormField>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField label="Tanggal Clearance">
               <InputField type="date" name="tanggal_clearance" value={formData.tanggal_clearance} onChange={handleChange} />
             </FormField>
@@ -316,9 +307,6 @@ export default function FormManifest() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField label="Pelabuhan Singgah Lanjutan (Opsional)">
               <Select name="id_tempat_singgah" value={formData.id_tempat_singgah} onChange={handleChange} options={selectOpts.pelabuhan} placeholder="Pilih Pelabuhan Lanjutan (Opsional)" />
-            </FormField>
-            <FormField label="Agen Kapal">
-              <Select name="id_agen" value={formData.id_agen} onChange={handleChange} options={selectOpts.agen} placeholder="Pilih Agen" />
             </FormField>
           </div>
         </div>

@@ -84,7 +84,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="h-[100dvh] min-h-[100dvh] w-full bg-[#F0F9FF] flex justify-center items-center font-sans overflow-hidden antialiased select-none p-3 sm:p-8 sm:h-auto sm:min-h-screen sm:overflow-auto">
+    <div className="h-[100dvh] min-h-[100dvh] w-full bg-slate-50 flex justify-center items-center font-sans overflow-hidden antialiased select-none p-3 sm:p-8 sm:h-auto sm:min-h-screen sm:overflow-auto">
       {/* Professional Toast Notification Component */}
       <Flash toast={toast} onClose={() => setToast(null)} />
 

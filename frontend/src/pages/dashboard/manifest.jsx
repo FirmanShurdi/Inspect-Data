@@ -113,32 +113,17 @@ export default function Manifest() {
   const columns = useMemo(
     () => [
       {
-        key: 'no_spb',
-        label: 'NO. SPB',
-        sortable: true,
-        render: (val, row) => {
-          const displaySpb = val || row.spb?.no_spb || '-';
-          return (
-            <span
-              onClick={() => handleOpenDetail(row)}
-              className="text-[#6366F1] font-semibold hover:underline cursor-pointer"
-            >
-              {displaySpb}
-            </span>
-          );
-        },
-      },
-      {
         key: 'no_urut',
         label: 'NO. REGISTER',
         sortable: true,
-        render: (val) => <span className="font-bold text-slate-800">{val || '-'}</span>,
-      },
-      {
-        key: 'ppk',
-        label: 'NO. PPK',
-        sortable: true,
-        render: (val) => <span className="text-slate-600 font-medium">{val || '-'}</span>,
+        render: (val, row) => (
+          <span
+            onClick={() => handleOpenDetail(row)}
+            className="font-bold text-slate-800 hover:text-[#0284C7] hover:underline cursor-pointer"
+          >
+            {val || '-'}
+          </span>
+        ),
       },
       {
         key: 'nama_kapal',
@@ -193,15 +178,6 @@ export default function Manifest() {
               <span className="text-[11px] text-slate-500 mt-0.5">{formattedDate || '-'}</span>
             </div>
           );
-        },
-      },
-      {
-        key: 'nama_agen',
-        label: 'AGEN',
-        sortable: true,
-        render: (val, row) => {
-          const agenNama = val || row.agen?.nama_agen || '-';
-          return <span className="text-slate-600 font-medium uppercase">{agenNama}</span>;
         },
       },
       {
@@ -293,7 +269,7 @@ export default function Manifest() {
         columns={columns}
         data={dataList}
         isLoading={isLoading}
-        searchPlaceholder="Cari No SPB, Register, Kapal, Agen..."
+        searchPlaceholder="Cari No. Register, Kapal, Agen..."
         actions={
           <button
             type="button"

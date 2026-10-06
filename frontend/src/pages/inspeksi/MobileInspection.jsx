@@ -284,7 +284,7 @@ export default function MobileInspection() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#F0F9FF] p-4 sm:p-6 lg:p-8 font-sans antialiased text-slate-800">
+    <div className="min-h-screen w-full bg-slate-50 p-4 sm:p-6 lg:p-8 font-sans antialiased text-slate-800">
       <Flash toast={toast} onClose={() => setToast({ message: '', type: 'success' })} />
 
       {isCameraOpen && (

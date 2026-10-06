@@ -24,10 +24,10 @@ const NAV_ITEMS_TOP = [
 const MASTER_SUB_ITEMS = [
   { name: 'Kapal', path: '/master/kapal' },
   { name: 'Nahkoda', path: '/master/nahkoda' },
-  { name: 'Agen', path: '/master/agen' },
   { name: 'Daerah', path: '/master/daerah' },
   { name: 'Pelabuhan', path: '/master/pelabuhan' },
-  { name: 'SPB Asal', path: '/master/spb-asal' },];
+  { name: 'SPB Asal', path: '/master/spb-asal' },
+];
 
 export default function AppSidebar() {
   const { isExpanded, setIsExpanded, isMobileOpen, setIsMobileOpen } = useSidebar();

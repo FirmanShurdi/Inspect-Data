@@ -19,6 +19,7 @@ export default function StatCards() {
 
   useEffect(() => {
     let isMounted = true;
+    const controller = new AbortController();
 
     const fetchDashboardStats = async () => {
       setIsLoading(true);
@@ -27,9 +28,9 @@ export default function StatCards() {
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
         const [kapalRes, manifestRes, logRes] = await Promise.all([
-          fetch('/api/kapal/all', { headers }).then((r) => r.json()).catch(() => ({})),
-          fetch('/api/manifest/all', { headers }).then((r) => r.json()).catch(() => ({})),
-          fetch('/api/log-aktivitas', { headers }).then((r) => r.json()).catch(() => ({})),
+          fetch('/api/kapal/all', { headers, signal: controller.signal }).then((r) => r.json()).catch(() => ({})),
+          fetch('/api/manifest/all', { headers, signal: controller.signal }).then((r) => r.json()).catch(() => ({})),
+          fetch('/api/log-aktivitas', { headers, signal: controller.signal }).then((r) => r.json()).catch(() => ({})),
         ]);
 
         if (!isMounted) return;
@@ -67,7 +68,9 @@ export default function StatCards() {
           inspeksiNow: iNow,
         });
       } catch (err) {
-        console.error('Error fetching dashboard stats:', err);
+        if (err.name !== 'AbortError') {
+          console.error('Error fetching dashboard stats:', err);
+        }
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -77,6 +80,7 @@ export default function StatCards() {
 
     return () => {
       isMounted = false;
+      controller.abort();
     };
   }, []);
 

@@ -13,7 +13,7 @@ const LayoutContent = () => {
   const { flash, clearFlash } = useAuth();
 
   return (
-    <div className="min-h-screen bg-[#F0F9FF] font-sans antialiased text-slate-800 relative">
+    <div className="min-h-screen bg-slate-50 font-sans antialiased text-slate-800 relative">
       <Flash toast={flash} onClose={clearFlash} />
       <AppSidebar />
       <Backdrop />
