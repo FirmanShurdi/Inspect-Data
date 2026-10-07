@@ -131,11 +131,17 @@ export default function MobileInspection() {
   const [parsedResult, setParsedResult] = useState(null);
   const [previewImage, setPreviewImage] = useState('');
 
-  const showToast = (message, type = 'success') => {
+  const showToast = (message, type = 'success', customDuration = null) => {
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-    setToast({ message, type });
-    const duration = type === 'error' ? 5000 : type === 'warning' ? 4000 : 3500;
-    toastTimeoutRef.current = setTimeout(() => setToast({ message: '', type: 'success' }), duration);
+    setToast({ message, type, duration: customDuration });
+
+    if (customDuration === 0 || customDuration === false || customDuration === Infinity) {
+      return;
+    }
+
+    const defaultDuration = type === 'error' ? 5000 : type === 'warning' ? 4000 : 3500;
+    const finalDuration = customDuration !== null ? customDuration : defaultDuration;
+    toastTimeoutRef.current = setTimeout(() => setToast({ message: '', type: 'success' }), finalDuration);
   };
 
   const handleCapture = async (rawCapturedImage) => {
@@ -174,7 +180,12 @@ export default function MobileInspection() {
           const uploadData = await uploadRes.json();
           if (uploadData?.data) {
             savedPenumpangRecord = uploadData.data;
-            showToast('Foto KTP tersimpan di database! Data diproses dilatar belakang...', 'success');
+          }
+          if (uploadRes.status === 409 || uploadData?.isDuplicate) {
+            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+            showToast(uploadData.message || 'PERINGATAN KTP DUPLIKAT TERDETEKSI!', 'error', 0);
+          } else if (uploadData?.data) {
+            showToast('Foto KTP tersimpan! Data diproses dilatar belakang...', 'success');
           }
         } catch (uploadErr) {
           console.error('Instant DB upload error:', uploadErr);
@@ -188,7 +199,7 @@ export default function MobileInspection() {
           if (result?.data && savedPenumpangRecord?.id_penumpang) {
             try {
               const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-              await fetch(`/api/penumpang/${savedPenumpangRecord.id_penumpang}`, {
+              const putRes = await fetch(`/api/penumpang/${savedPenumpangRecord.id_penumpang}`, {
                 method: 'PUT',
                 headers: {
                   'Content-Type': 'application/json',
@@ -204,7 +215,13 @@ export default function MobileInspection() {
                   is_ai_extract: true,
                 }),
               });
-              showToast(`Berhasil mengekstrak data KTP (ID: ${savedPenumpangRecord.id_penumpang})`, 'success');
+              const putData = await putRes.json();
+              if (putRes.status === 409 || putData?.isDuplicate) {
+                if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                showToast(putData.message || 'PERINGATAN KTP DUPLIKAT TERDETEKSI!', 'error', 0);
+              } else if (putData?.status) {
+                showToast(`Berhasil mengekstrak data KTP (ID: ${savedPenumpangRecord.id_penumpang})`, 'success');
+              }
             } catch (e) {
               console.error('Update AI result error:', e);
             }
@@ -231,7 +248,7 @@ export default function MobileInspection() {
       const activeManifestId = sessionStorage.getItem('ksop_active_manifest_id');
       if (activeManifestId) {
         const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-        await fetch('/api/penumpang/store', {
+        const storeRes = await fetch('/api/penumpang/store', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -249,6 +266,13 @@ export default function MobileInspection() {
             status_verifikasi: 'pending',
           }),
         });
+        const storeData = await storeRes.json();
+        if (storeRes.status === 409 || storeData?.isDuplicate) {
+          if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+          showToast(storeData.message || '🔴 PERINGATAN KTP DUPLIKAT TERDETEKSI!', 'error', 0);
+          setIsSaving(false);
+          return;
+        }
       }
 
       const payload = {

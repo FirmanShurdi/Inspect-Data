@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, memo } from 'react';
 import {
   RefreshCw, CheckCircle2, Copy, Image as ImageIcon, ShieldCheck,
-  ChevronLeft, ChevronRight, Check, Trash2, Camera
+  ChevronLeft, ChevronRight, Check, Trash2, Camera, AlertTriangle
 } from 'lucide-react';
 import { decodeNIK } from '../../utils/nikDecoder';
 import DeleteModal from '../modal/delete';
@@ -91,6 +91,7 @@ const mapInitialData = (data = {}, selectedKapal = null) => ({
   foto: getPhotoSrc(data),
   foto_base64: getPhotoSrc(data),
   namaKapal: data.namaKapal || selectedKapal?.nama || selectedKapal?.nama_kapal || 'KM SYAHBANDAR KSOP',
+  status: data.status || '',
 });
 
 // Helper Image Compressor with memory safety
@@ -330,6 +331,21 @@ export default function ResultCard({
       </div>
 
       <form onSubmit={handleSubmit} className="p-5 sm:p-6 flex flex-col gap-5">
+        {/* Warning Banner for status column from penumpang table */}
+        {(formData.status || data?.status) && (
+          <div className="p-3.5 rounded-2xl bg-rose-50 border-2 border-rose-400 text-rose-950 flex items-start gap-3 shadow-sm animate-in fade-in duration-200">
+            <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <span className="text-[11px] font-extrabold uppercase tracking-wider text-rose-700 block mb-0.5">
+                STATUS PERINGATAN (Tabel Penumpang):
+              </span>
+              <p className="text-xs font-extrabold leading-relaxed text-rose-950 whitespace-pre-wrap break-words">
+                {formData.status || data?.status}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Photo & NIK Section */}
         {!isAnakOnly ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200/60">

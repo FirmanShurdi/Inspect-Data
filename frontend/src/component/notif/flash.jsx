@@ -10,10 +10,11 @@ const Flash = ({ toast, onClose, duration = 3500 }) => {
   if (!toast || !toast.message) return null;
 
   const type = toast.type || 'success';
-  const toastDuration = toast.duration || duration;
+  const toastDuration = toast.duration !== undefined ? toast.duration : duration;
 
   useEffect(() => {
     if (!onClose) return;
+    if (toastDuration === 0 || toastDuration === false || toastDuration === Infinity) return;
     const timer = setTimeout(() => onClose(), toastDuration);
     return () => clearTimeout(timer);
   }, [toast, onClose, toastDuration]);

@@ -138,6 +138,51 @@ const uploadScanPenumpang = async (req, res) => {
       }
     }
 
+    // Pengecekan Keamanan Ganda (Anti-Duplikasi Kapal & Masa Tenggang 12 Jam)
+    let duplicateWarningMsg = null;
+    let isDuplicate = false;
+    let isSameManifest = false;
+    let is12Hours = false;
+
+    const cleanNik = nik ? String(nik).trim() : null;
+    if (cleanNik && cleanNik !== "") {
+      // 1. Cek Duplikasi pada Manifest Kapal yang Sama
+      const existInManifest = await penumpang.findOne({
+        where: { id_manifest, nik: cleanNik }
+      });
+      if (existInManifest) {
+        isDuplicate = true;
+        isSameManifest = true;
+        duplicateWarningMsg = `❌ KTP dengan NIK ${cleanNik} sudah terdaftar pada manifest kapal ini!`;
+      } else {
+        // 2. Cek Masa Tenggang 12 Jam Global di Seluruh Kapal
+        const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+        const exist12Hours = await penumpang.findOne({
+          where: {
+            nik: cleanNik,
+            createdAt: { [Op.gte]: twelveHoursAgo }
+          },
+          include: [{
+            model: manifest,
+            as: "manifest",
+            include: [{ model: kapal, as: "kapal" }]
+          }],
+          order: [["id_penumpang", "DESC"]]
+        });
+
+        if (exist12Hours) {
+          const kapalNama = exist12Hours.manifest?.kapal?.nama_kapal || "Kapal Lain";
+          const diffMinutes = Math.round((Date.now() - new Date(exist12Hours.createdAt).getTime()) / (1000 * 60));
+          const hoursAgo = Math.floor(diffMinutes / 60);
+          const minsAgo = diffMinutes % 60;
+          const timeStr = hoursAgo > 0 ? `${hoursAgo} jam ${minsAgo} menit` : `${minsAgo} menit`;
+          isDuplicate = true;
+          is12Hours = true;
+          duplicateWarningMsg = `🔴 PERINGATAN KTP DUPLIKAT: NIK ${cleanNik} sudah terdaftar ${timeStr} lalu pada Kapal ${kapalNama}! (Masa Tenggang 12 Jam)`;
+        }
+      }
+    }
+
     let foto_ktp_path = null;
 
     if (foto_base64) {
@@ -167,7 +212,7 @@ const uploadScanPenumpang = async (req, res) => {
     // Immediately insert into penumpang table in database with status 'pending'
     const newRecord = await penumpang.create({
       id_manifest,
-      nik: nik ? String(nik).trim() : null,
+      nik: cleanNik,
       nama_penumpang: nama_penumpang ? String(nama_penumpang).trim() : null,
       tempat_lahir: tempat_lahir ? String(tempat_lahir).trim() : null,
       tanggal_lahir: tanggal_lahir || null,
@@ -176,6 +221,7 @@ const uploadScanPenumpang = async (req, res) => {
       foto_ktp: foto_ktp_path,
       tipe_penumpang: "naik",
       status_verifikasi: "pending",
+      status: duplicateWarningMsg,
     });
 
     try {
@@ -199,9 +245,12 @@ const uploadScanPenumpang = async (req, res) => {
       console.error("Error recordLog in uploadScanPenumpang:", logErr);
     }
 
-    return res.status(201).json({
+    return res.status(isDuplicate ? 409 : 201).json({
       status: true,
-      message: "Berhasil menyimpan foto scan & data penumpang ke database",
+      isDuplicate,
+      isSameManifest,
+      is12Hours,
+      message: duplicateWarningMsg || "Berhasil menyimpan foto scan & data penumpang ke database",
       data: newRecord,
     });
   } catch (error) {
@@ -467,9 +516,52 @@ const createPenumpang = async (req, res) => {
       });
     }
 
+    // Pengecekan NIK Duplikat Kapal & 12 Jam untuk Penumpang Dewasa
+    let duplicateWarningMsg = null;
+    let isDuplicate = false;
+    let isSameManifest = false;
+    let is12Hours = false;
+
+    const cleanAdultNik = nik ? String(nik).trim() : null;
+    if (cleanAdultNik && cleanAdultNik !== "") {
+      const existInManifest = await penumpang.findOne({
+        where: { id_manifest, nik: cleanAdultNik }
+      });
+      if (existInManifest) {
+        isDuplicate = true;
+        isSameManifest = true;
+        duplicateWarningMsg = `❌ KTP dengan NIK ${cleanAdultNik} sudah terdaftar pada manifest kapal ini!`;
+      } else {
+        const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+        const exist12Hours = await penumpang.findOne({
+          where: {
+            nik: cleanAdultNik,
+            createdAt: { [Op.gte]: twelveHoursAgo }
+          },
+          include: [{
+            model: manifest,
+            as: "manifest",
+            include: [{ model: kapal, as: "kapal" }]
+          }],
+          order: [["id_penumpang", "DESC"]]
+        });
+
+        if (exist12Hours) {
+          const kapalNama = exist12Hours.manifest?.kapal?.nama_kapal || "Kapal Lain";
+          const diffMinutes = Math.round((Date.now() - new Date(exist12Hours.createdAt).getTime()) / (1000 * 60));
+          const hoursAgo = Math.floor(diffMinutes / 60);
+          const minsAgo = diffMinutes % 60;
+          const timeStr = hoursAgo > 0 ? `${hoursAgo} jam ${minsAgo} menit` : `${minsAgo} menit`;
+          isDuplicate = true;
+          is12Hours = true;
+          duplicateWarningMsg = `🔴 PERINGATAN KTP DUPLIKAT: NIK ${cleanAdultNik} sudah terdaftar ${timeStr} lalu pada Kapal ${kapalNama}! (Masa Tenggang 12 Jam)`;
+        }
+      }
+    }
+
     const newPenumpang = await penumpang.create({
       id_manifest,
-      nik: nik ? String(nik).trim() : null,
+      nik: cleanAdultNik,
       nama_penumpang: nama_penumpang ? String(nama_penumpang).trim() : null,
       tempat_lahir: tempat_lahir ? String(tempat_lahir).trim() : null,
       tanggal_lahir: normalizeSqlDate(tanggal_lahir) || tanggal_lahir || null,
@@ -479,6 +571,7 @@ const createPenumpang = async (req, res) => {
       tipe_penumpang: tipe_penumpang || "naik",
       status_verifikasi: status_verifikasi || "pending",
       kategori_penumpang: kategori_penumpang || "Dewasa",
+      status: duplicateWarningMsg,
     });
 
     // If adult passenger brings child, record in penumpang_anak table with id_penumpang
@@ -491,23 +584,21 @@ const createPenumpang = async (req, res) => {
             id_manifest: newPenumpang.id_manifest,
             id_penumpang: newPenumpang.id_penumpang,
             nama_anak: String(item.namaAnak).trim(),
-            tanggal_lahir: normalizeSqlDate(item.tanggalLahirAnak || item.tanggal_lahir),
-            jenis_kelamin: normalizeChildGender(item.jenisKelaminAnak || item.jenis_kelamin),
+            tanggal_lahir: normalizeSqlDate(item.tanggalLahirAnak),
+            jenis_kelamin: normalizeChildGender(item.jenisKelaminAnak),
           }));
+
         if (childRecords.length > 0) {
           await penumpangAnak.bulkCreate(childRecords);
         }
-      } else {
-        const childName = nama_anak;
-        if (childName && String(childName).trim() !== "") {
-          await penumpangAnak.create({
-            id_manifest: newPenumpang.id_manifest,
-            id_penumpang: newPenumpang.id_penumpang,
-            nama_anak: String(childName).trim(),
-            tanggal_lahir: normalizeSqlDate(tanggal_lahir_anak),
-            jenis_kelamin: normalizeChildGender(jenis_kelamin_anak),
-          });
-        }
+      } else if (nama_anak && String(nama_anak).trim() !== "") {
+        await penumpangAnak.create({
+          id_manifest: newPenumpang.id_manifest,
+          id_penumpang: newPenumpang.id_penumpang,
+          nama_anak: String(nama_anak).trim(),
+          tanggal_lahir: normalizeSqlDate(tanggal_lahir_anak),
+          jenis_kelamin: normalizeChildGender(jenis_kelamin_anak),
+        });
       }
     }
 
@@ -536,9 +627,12 @@ const createPenumpang = async (req, res) => {
       console.error("Error recordLog in createPenumpang:", logErr);
     }
 
-    return res.status(201).json({
+    return res.status(isDuplicate ? 409 : 201).json({
       status: true,
-      message: "Berhasil menambahkan data penumpang",
+      isDuplicate,
+      isSameManifest,
+      is12Hours,
+      message: duplicateWarningMsg || "Berhasil menambahkan data penumpang",
       data: createdWithAnak || newPenumpang,
     });
   } catch (error) {
@@ -716,6 +810,54 @@ const updatePenumpang = async (req, res) => {
       });
     }
 
+    // Pengecekan NIK Duplikat pada Update Data Penumpang
+    let updateWarningMsg = null;
+    let isDuplicate = false;
+    let isSameManifest = false;
+    let is12Hours = false;
+
+    const updateNik = nik !== undefined ? (nik ? String(nik).trim() : null) : target.nik;
+    if (updateNik && updateNik !== "") {
+      const existInManifest = await penumpang.findOne({
+        where: {
+          id_manifest: target.id_manifest,
+          nik: updateNik,
+          id_penumpang: { [Op.ne]: target.id_penumpang }
+        }
+      });
+      if (existInManifest) {
+        isDuplicate = true;
+        isSameManifest = true;
+        updateWarningMsg = `❌ KTP dengan NIK ${updateNik} sudah terdaftar pada manifest kapal ini!`;
+      } else {
+        const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+        const exist12Hours = await penumpang.findOne({
+          where: {
+            nik: updateNik,
+            id_penumpang: { [Op.ne]: target.id_penumpang },
+            createdAt: { [Op.gte]: twelveHoursAgo }
+          },
+          include: [{
+            model: manifest,
+            as: "manifest",
+            include: [{ model: kapal, as: "kapal" }]
+          }],
+          order: [["id_penumpang", "DESC"]]
+        });
+
+        if (exist12Hours) {
+          const kapalNama = exist12Hours.manifest?.kapal?.nama_kapal || "Kapal Lain";
+          const diffMinutes = Math.round((Date.now() - new Date(exist12Hours.createdAt).getTime()) / (1000 * 60));
+          const hoursAgo = Math.floor(diffMinutes / 60);
+          const minsAgo = diffMinutes % 60;
+          const timeStr = hoursAgo > 0 ? `${hoursAgo} jam ${minsAgo} menit` : `${minsAgo} menit`;
+          isDuplicate = true;
+          is12Hours = true;
+          updateWarningMsg = `🔴 PERINGATAN KTP DUPLIKAT: NIK ${updateNik} sudah terdaftar ${timeStr} lalu pada Kapal ${kapalNama}! (Masa Tenggang 12 Jam)`;
+        }
+      }
+    }
+
     // Update parent passenger fields
     await target.update({
       nik: nik !== undefined ? (nik ? String(nik).trim() : null) : target.nik,
@@ -727,6 +869,7 @@ const updatePenumpang = async (req, res) => {
       foto_ktp: (foto_ktp || req.body.foto || req.body.foto_base64) ? (foto_ktp || req.body.foto || req.body.foto_base64) : target.foto_ktp,
       tipe_penumpang: tipe_penumpang !== undefined ? tipe_penumpang : target.tipe_penumpang,
       status_verifikasi: status_verifikasi !== undefined ? status_verifikasi : target.status_verifikasi,
+      status: updateWarningMsg !== null ? updateWarningMsg : target.status,
     });
 
     // Sync associated child records in penumpang_anak table for adult passenger
@@ -842,9 +985,12 @@ const updatePenumpang = async (req, res) => {
       console.error("Error recordLog in updatePenumpang:", logErr);
     }
 
-    return res.status(200).json({
+    return res.status(isDuplicate ? 409 : 200).json({
       status: true,
-      message: "Berhasil mengupdate data penumpang & data anak",
+      isDuplicate,
+      isSameManifest,
+      is12Hours,
+      message: updateWarningMsg || "Berhasil mengupdate data penumpang & data anak",
       data: updatedWithAnak,
     });
   } catch (error) {
