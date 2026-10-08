@@ -269,7 +269,7 @@ export default function MobileInspection() {
         const storeData = await storeRes.json();
         if (storeRes.status === 409 || storeData?.isDuplicate) {
           if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-          showToast(storeData.message || '🔴 PERINGATAN KTP DUPLIKAT TERDETEKSI!', 'error', 0);
+          showToast(storeData.message || 'PERINGATAN KTP DUPLIKAT TERDETEKSI!', 'error', 0);
           setIsSaving(false);
           return;
         }

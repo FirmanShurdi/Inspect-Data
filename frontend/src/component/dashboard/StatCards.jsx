@@ -32,7 +32,7 @@ export default function StatCards() {
           fetch('/api/manifest/all', { headers, signal: controller.signal }).then((r) => r.json()).catch(() => ({})),
           fetch('/api/log-aktivitas', { headers, signal: controller.signal }).then((r) => r.json()).catch(() => ({})),
         ]);
-
+        
         if (!isMounted) return;
 
         const kapalList = kapalRes.datas || kapalRes.data || [];
