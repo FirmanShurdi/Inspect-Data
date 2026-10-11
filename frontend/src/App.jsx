@@ -8,13 +8,14 @@ import MobileInspection from './pages/inspeksi/MobileInspection';
 import UserManagement from './pages/users/UserManagement';
 import KapalMaster from './pages/master/KapalMaster';
 
-import Manifest from './pages/dashboard/manifest';
-import FormManifest from './pages/dashboard/formManifest';
-import DetailManifest from './pages/dashboard/detailmanifest';
+import Clearance from './pages/dashboard/clearance';
+import FormClearance from './pages/dashboard/formClearance';
+import DetailClearance from './pages/dashboard/detailClearance';
 import VerifikasiPenumpang from './pages/dashboard/VerifikasiPenumpang';
+import Profile from './pages/dashboard/Profile';
 import NahkodaMaster from './pages/master/NahkodaMaster';
 import PelabuhanMaster from './pages/master/PelabuhanMaster';
-import SpbAsalMaster from './pages/master/SpbAsalMaster';
+
 import DaerahMaster from './pages/master/DaerahMaster';
 import LogAktivitas from './pages/log/LogAktivitas';
 
@@ -91,19 +92,27 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/profil" element={<Profile />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="/users" element={<UserManagement />} />
               <Route path="/inspeksi" element={<MobileInspection />} />
-              <Route path="/manifest" element={<Manifest />} />
-              <Route path="/manifest/tambah" element={<FormManifest />} />
-              <Route path="/manifest/edit/:id" element={<FormManifest />} />
-              <Route path="/manifest/detail/:id" element={<DetailManifest />} />
-              <Route path="/manifest/verifikasi/:id" element={<VerifikasiPenumpang />} />
+
+              {/* Clearance Routes */}
+              <Route path="/clearance" element={<Clearance />} />
+              <Route path="/clearance/tambah" element={<FormClearance />} />
+              <Route path="/clearance/edit/:id" element={<FormClearance />} />
+              <Route path="/clearance/detail/:id" element={<DetailClearance />} />
+              <Route path="/clearance/verifikasi/:id" element={<VerifikasiPenumpang />} />
+
+              {/* Backward compatibility aliases */}
+              <Route path="/manifest" element={<Navigate to="/clearance" replace />} />
+              <Route path="/manifest/tambah" element={<Navigate to="/clearance/tambah" replace />} />
+
               <Route path="/nahkoda" element={<NahkodaMaster />} />
               <Route path="/master/nahkoda" element={<NahkodaMaster />} />
               <Route path="/pelabuhan" element={<PelabuhanMaster />} />
               <Route path="/master/pelabuhan" element={<PelabuhanMaster />} />
-              <Route path="/spb-asal" element={<SpbAsalMaster />} />
-              <Route path="/master/spb-asal" element={<SpbAsalMaster />} />
+
               <Route path="/daerah" element={<DaerahMaster />} />
               <Route path="/master/daerah" element={<DaerahMaster />} />
               <Route path="/negara" element={<DaerahMaster />} />

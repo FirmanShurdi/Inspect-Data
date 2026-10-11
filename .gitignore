@@ -24,3 +24,7 @@ push_out.txt
 .idea/
 .DS_Store
 Thumbs.db
+
+# Vite cache
+.vite/
+**/.vite/

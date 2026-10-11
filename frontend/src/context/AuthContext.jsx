@@ -36,10 +36,26 @@ export const AuthProvider = ({ children }) => {
           setUser(null);
           showFlash('Sesi Anda telah habis, silahkan login kembali!', 'warning');
         } else {
-          setUser(JSON.parse(savedUser));
+          const parsed = JSON.parse(savedUser);
+          setUser(parsed);
           // Refresh last activity
           sessionStorage.setItem('lastActivity', `${Date.now()}`);
           lastActivityRef.current = Date.now();
+
+          // Sync fresh user data (photo, name, role) from API
+          if (parsed?.id_user) {
+            fetch(`/api/users/${parsed.id_user}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            })
+              .then((r) => r.json())
+              .then((res) => {
+                if (res?.data) {
+                  setUser(res.data);
+                  sessionStorage.setItem('user', JSON.stringify(res.data));
+                }
+              })
+              .catch(() => {});
+          }
         }
       } catch (error) {
         console.error('Session data error:', error);
@@ -114,7 +130,14 @@ export const AuthProvider = ({ children }) => {
     window.location.href = '/login';
   };
 
-  const value = { user, loading, flash, showFlash, clearFlash, login, logout };
+  const updateUserSession = (updatedUser) => {
+    if (updatedUser) {
+      sessionStorage.setItem('user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+    }
+  };
+
+  const value = { user, loading, flash, showFlash, clearFlash, login, logout, updateUserSession, fetchUserData };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

@@ -8,7 +8,7 @@ import Select from '../../component/form/Select';
 
 const INITIAL_FORM = {
   no_urut: '',
-  no_spb_asal: '',
+  cooldown_jam: 20,
   tanggal_clearance: '',
   pukul_agen_clearance: '',
   id_kapal: '',
@@ -22,7 +22,6 @@ const INITIAL_FORM = {
   id_tujuan_akhir: '',
   tanggal_berangkat: '',
   pukul_kapal_berangkat: '',
-  id_tempat_singgah: '',
 };
 
 const getAuthHeader = () => {
@@ -37,7 +36,7 @@ const FormField = ({ label, children }) => (
   </div>
 );
 
-export default function FormManifest() {
+export default function FormClearance() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = Boolean(id);
@@ -52,18 +51,16 @@ export default function FormManifest() {
     kapal: [],
     nahkoda: [],
     pelabuhan: [],
-    spbAsal: [],
   });
 
-  // Fetch all dropdown options in parallel with safe single-read JSON parsing
+  // Fetch all dropdown options in parallel
   const fetchDropdowns = useCallback(async () => {
     try {
       const headers = getAuthHeader();
-      const [resKapal, resNahkoda, resPelabuhan, resSpbAsal] = await Promise.allSettled([
+      const [resKapal, resNahkoda, resPelabuhan] = await Promise.allSettled([
         fetch('/api/kapal/all', { headers }).then((r) => (r.ok ? r : fetch('/api/kapal', { headers }))),
         fetch('/api/nahkoda/all', { headers }),
         fetch('/api/pelabuhan/all', { headers }),
-        fetch('/api/spb-asal/all', { headers }),
       ]);
 
       const parse = async (res) => {
@@ -78,25 +75,24 @@ export default function FormManifest() {
         return [];
       };
 
-      const [kapal, nahkoda, pelabuhan, spbAsal] = await Promise.all([
+      const [kapal, nahkoda, pelabuhan] = await Promise.all([
         parse(resKapal),
         parse(resNahkoda),
         parse(resPelabuhan),
-        parse(resSpbAsal),
       ]);
 
-      setOptions({ kapal, nahkoda, pelabuhan, spbAsal });
+      setOptions({ kapal, nahkoda, pelabuhan });
     } catch (err) {
       console.error('Fetch Dropdowns Error:', err);
     }
   }, []);
 
   // Fetch detail for edit mode
-  const fetchManifestDetail = useCallback(async () => {
+  const fetchClearanceDetail = useCallback(async () => {
     if (!id) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/manifest/${id}`, { headers: getAuthHeader() });
+      const res = await fetch(`/api/clearance/${id}`, { headers: getAuthHeader() });
       if (res.ok) {
         const resData = await res.json();
         const item = resData.data || resData.datas || resData;
@@ -109,7 +105,7 @@ export default function FormManifest() {
         });
       }
     } catch (err) {
-      setToast({ message: 'Gagal mengambil data manifest', type: 'error' });
+      setToast({ message: 'Gagal mengambil data clearance', type: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -117,8 +113,8 @@ export default function FormManifest() {
 
   useEffect(() => {
     fetchDropdowns();
-    fetchManifestDetail();
-  }, [fetchDropdowns, fetchManifestDetail]);
+    fetchClearanceDetail();
+  }, [fetchDropdowns, fetchClearanceDetail]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -138,7 +134,7 @@ export default function FormManifest() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const endpoint = isEdit ? `/api/manifest/update/${id}` : '/api/manifest/store';
+      const endpoint = isEdit ? `/api/clearance/update/${id}` : '/api/clearance/store';
       const method = isEdit ? 'PUT' : 'POST';
 
       const res = await fetch(endpoint, {
@@ -149,14 +145,14 @@ export default function FormManifest() {
 
       const resData = await res.json().catch(() => ({}));
       if (res.ok) {
-        setToast({ message: isEdit ? 'Manifest berhasil diperbarui!' : 'Manifest baru berhasil disimpan!', type: 'success' });
-        setTimeout(() => navigate('/manifest'), 1200);
+        setToast({ message: isEdit ? 'Clearance berhasil diperbarui!' : 'Clearance baru berhasil disimpan!', type: 'success' });
+        setTimeout(() => navigate('/clearance'), 1200);
       } else {
-        setToast({ message: resData.msg || resData.message || 'Gagal menyimpan data manifest.', type: 'error' });
+        setToast({ message: resData.msg || resData.message || 'Gagal menyimpan data clearance.', type: 'error' });
       }
     } catch (err) {
-      setToast({ message: isEdit ? 'Perubahan disimpan (Local).' : 'Data Manifest baru disiapkan.', type: 'success' });
-      setTimeout(() => navigate('/manifest'), 1200);
+      setToast({ message: isEdit ? 'Perubahan disimpan.' : 'Data Clearance baru berhasil disiapkan.', type: 'success' });
+      setTimeout(() => navigate('/clearance'), 1200);
     } finally {
       setIsSubmitting(false);
     }
@@ -164,13 +160,6 @@ export default function FormManifest() {
 
   // Formatted options map
   const selectOpts = useMemo(() => ({
-    spbAsal: [
-      { value: '', label: 'Pilih atau ketik No SPB Asal...' },
-      ...options.spbAsal.map((s) => ({
-        value: s.kode_spb || s.no_spb_asal,
-        label: `${s.kode_spb || s.no_spb_asal} ${s.asal ? `- ${s.asal}` : ''}`,
-      })),
-    ],
     kapal: [
       { value: '', label: 'Pilih Kapal' },
       ...options.kapal.map((k) => ({ value: k.id_kapal, label: k.nama_kapal })),
@@ -200,15 +189,15 @@ export default function FormManifest() {
         <div className="flex items-center gap-3.5">
           <button
             type="button"
-            onClick={() => navigate('/manifest')}
+            onClick={() => navigate('/clearance')}
             className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-600 flex items-center justify-center transition-colors cursor-pointer shrink-0"
-            title="Kembali ke Manifest"
+            title="Kembali ke Clearance"
           >
             <ArrowLeft size={18} />
           </button>
           <div>
             <h1 className="text-lg font-bold text-slate-800 tracking-tight">
-              {isEdit ? 'Form Edit Manifest Pelayaran' : 'Form Tambah Manifest Pelayaran'}
+              {isEdit ? 'Form Edit Clearance Pelayaran' : 'Form Tambah Clearance Pelayaran'}
             </h1>
             <p className="text-xs font-medium text-slate-500">
               Isi kelengkapan data clearance, kapal & awak, serta rute perjalanan
@@ -229,8 +218,8 @@ export default function FormManifest() {
             <FormField label="Nomor Register">
               <InputField type="text" name="no_urut" value={formData.no_urut} onChange={handleChange} placeholder="Nomor Register" />
             </FormField>
-            <FormField label="No SPB Asal">
-              <Select name="no_spb_asal" value={formData.no_spb_asal} onChange={handleChange} options={selectOpts.spbAsal} placeholder="Pilih atau ketik No SPB Asal..." />
+            <FormField label="Masa Tenggang KTP (Cooldown Jam)">
+              <InputField type="number" name="cooldown_jam" value={formData.cooldown_jam} onChange={handleChange} placeholder="20" min="0" />
             </FormField>
           </div>
 
@@ -303,19 +292,13 @@ export default function FormManifest() {
               <InputField type="time" name="pukul_kapal_berangkat" value={formData.pukul_kapal_berangkat} onChange={handleChange} />
             </FormField>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Pelabuhan Singgah Lanjutan (Opsional)">
-              <Select name="id_tempat_singgah" value={formData.id_tempat_singgah} onChange={handleChange} options={selectOpts.pelabuhan} placeholder="Pilih Pelabuhan Lanjutan (Opsional)" />
-            </FormField>
-          </div>
         </div>
 
         {/* FOOTER ACTIONS */}
         <div className="flex items-center justify-end gap-3 pt-2">
           <button
             type="button"
-            onClick={() => navigate('/manifest')}
+            onClick={() => navigate('/clearance')}
             className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-bold transition-all cursor-pointer"
           >
             Batal

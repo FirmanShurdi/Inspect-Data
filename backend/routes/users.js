@@ -19,7 +19,7 @@ const storage = multer.diskStorage({
     const ext = path.extname(file.originalname).toLowerCase();
     const rawUsername = req.body?.username || req.params?.id || 'user';
     const cleanUsername = rawUsername.toString().trim().replace(/[^a-zA-Z0-9_-]/g, '_');
-    cb(null, `${cleanUsername}${ext}`);
+    cb(null, `${cleanUsername}-${Date.now()}${ext}`);
   }
 });
 

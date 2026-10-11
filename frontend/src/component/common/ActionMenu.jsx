@@ -126,6 +126,7 @@ export default function ActionMenu({
               const Icon = item.icon;
               const isDanger = item.variant === 'rose' || item.variant === 'danger' || item.isDangerous;
               const isEdit = item.variant === 'amber' || item.variant === 'edit';
+              const isEmerald = item.variant === 'emerald' || item.variant === 'success';
 
               return (
                 <button
@@ -141,6 +142,8 @@ export default function ActionMenu({
                       ? 'text-rose-600 hover:bg-rose-50'
                       : isEdit
                       ? 'text-amber-600 hover:bg-amber-50'
+                      : isEmerald
+                      ? 'text-emerald-600 hover:bg-emerald-50'
                       : 'text-slate-700 hover:bg-slate-50'
                   }`}
                 >
@@ -148,7 +151,13 @@ export default function ActionMenu({
                     <Icon
                       size={16}
                       className={`shrink-0 ${
-                        isDanger ? 'text-rose-500' : isEdit ? 'text-amber-500' : 'text-slate-400'
+                        isDanger
+                          ? 'text-rose-500'
+                          : isEdit
+                          ? 'text-amber-500'
+                          : isEmerald
+                          ? 'text-emerald-500'
+                          : 'text-slate-400'
                       }`}
                     />
                   )}

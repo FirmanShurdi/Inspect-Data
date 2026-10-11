@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Plus, Ship, MapPin } from 'lucide-react';
+import { FileText, Plus, FileSpreadsheet } from 'lucide-react';
 import DataTable from '../../component/ui/DataTable';
 import Flash from '../../component/notif/flash';
 import ActionMenu from '../../component/common/ActionMenu';
 import DeleteModal from '../../component/modal/delete';
+import { exportClearanceToExcel } from '../../utils/clearanceExcelExporter';
 
-export default function Manifest() {
+export default function Clearance() {
   const navigate = useNavigate();
   const [dataList, setDataList] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -19,12 +20,12 @@ export default function Manifest() {
     isLoading: false,
   });
 
-  // Fetch manifest data from backend API
-  const fetchManifest = useCallback(async () => {
+  // Fetch clearance data from backend API
+  const fetchClearance = useCallback(async () => {
     setIsLoading(true);
     try {
       const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-      const res = await fetch('/api/manifest', {
+      const res = await fetch('/api/clearance', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (res.ok) {
@@ -34,7 +35,7 @@ export default function Manifest() {
         setDataList([]);
       }
     } catch (err) {
-      console.error('Fetch Manifest Error:', err);
+      console.error('Fetch Clearance Error:', err);
       setDataList([]);
     } finally {
       setIsLoading(false);
@@ -42,35 +43,64 @@ export default function Manifest() {
   }, []);
 
   useEffect(() => {
-    fetchManifest();
-  }, [fetchManifest]);
+    fetchClearance();
+  }, [fetchClearance]);
 
   const handleOpenDetail = useCallback((item) => {
-    if (item?.id_manifest) {
-      navigate(`/manifest/detail/${item.id_manifest}`);
+    const id = item?.id_clearance || item?.id_manifest;
+    if (id) {
+      navigate(`/clearance/detail/${id}`);
     }
   }, [navigate]);
 
   const handleOpenAdd = () => {
-    navigate('/manifest/tambah');
+    navigate('/clearance/tambah');
   };
 
   const handleOpenEdit = useCallback((item) => {
-    if (item?.id_manifest) {
-      navigate(`/manifest/edit/${item.id_manifest}`);
+    const id = item?.id_clearance || item?.id_manifest;
+    if (id) {
+      navigate(`/clearance/edit/${id}`);
     } else {
-      navigate('/manifest/tambah');
+      navigate('/clearance/tambah');
     }
   }, [navigate]);
 
   const handleOpenVerifikasi = useCallback((item) => {
-    if (item?.id_manifest) {
-      navigate(`/manifest/verifikasi/${item.id_manifest}`, { state: { from: '/manifest' } });
+    const id = item?.id_clearance || item?.id_manifest;
+    if (id) {
+      navigate(`/clearance/verifikasi/${id}`, { state: { from: '/clearance' } });
     }
   }, [navigate]);
 
+  const handleExportExcel = useCallback(async (item) => {
+    const id = item?.id_clearance || item?.id_manifest;
+    if (!id) return;
+    try {
+      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+      const res = await fetch(`/api/clearance/${id}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (res.ok) {
+        const resData = await res.json();
+        const detail = resData.data || resData.datas || resData;
+        const exportRes = await exportClearanceToExcel(detail);
+        setToast({
+          message: `Berhasil mencetak Manifest Excel: ${exportRes.fileName} (${exportRes.totalKeseluruhan} Penumpang)`,
+          type: 'success',
+        });
+      } else {
+        setToast({ message: 'Gagal mengambil detail clearance untuk diexport', type: 'error' });
+      }
+    } catch (e) {
+      console.error('Export Excel Error:', e);
+      setToast({ message: 'Gagal mengekspor data ke Excel: ' + e.message, type: 'error' });
+    }
+  }, []);
+
   const handleOpenDelete = useCallback((item) => {
-    if (item?.id_manifest) {
+    const id = item?.id_clearance || item?.id_manifest;
+    if (id) {
       setDeleteModal({
         isOpen: true,
         item,
@@ -81,35 +111,34 @@ export default function Manifest() {
 
   const handleConfirmDelete = async () => {
     const item = deleteModal.item;
-    if (!item?.id_manifest) return;
+    const id = item?.id_clearance || item?.id_manifest;
+    if (!id) return;
 
     setDeleteModal((prev) => ({ ...prev, isLoading: true }));
 
     try {
       const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-      const res = await fetch(`/api/manifest/delete/${item.id_manifest}`, {
+      const res = await fetch(`/api/clearance/delete/${id}`, {
         method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
       if (res.ok) {
-        setToast({ message: `Manifest #${item.id_manifest} berhasil dihapus!`, type: 'success' });
+        setToast({ message: `Clearance #${id} berhasil dihapus!`, type: 'success' });
         setDeleteModal({ isOpen: false, item: null, isLoading: false });
-        fetchManifest();
+        fetchClearance();
       } else {
         const resData = await res.json().catch(() => ({}));
-        setToast({ message: resData.msg || resData.message || 'Gagal menghapus manifest', type: 'error' });
+        setToast({ message: resData.msg || resData.message || 'Gagal menghapus clearance', type: 'error' });
         setDeleteModal((prev) => ({ ...prev, isLoading: false }));
       }
     } catch (err) {
-      console.error('Delete Manifest error:', err);
-      setToast({ message: 'Terjadi kesalahan saat menghapus data manifest', type: 'error' });
+      console.error('Delete Clearance error:', err);
+      setToast({ message: 'Terjadi kesalahan saat menghapus data clearance', type: 'error' });
       setDeleteModal((prev) => ({ ...prev, isLoading: false }));
     }
   };
 
-  // Presisi Kolom sesuai Gambar UI:
-  // NO. SPB | NO. REGISTER | NO. PPK | KAPAL | NAHKODA | TUJUAN | WAKTU BRGKT | AGEN | AKSI
   const columns = useMemo(
     () => [
       {
@@ -146,6 +175,16 @@ export default function Manifest() {
           const nahkoda = val || row.nahkoda?.nama_nahkoda || '-';
           return <span className="text-slate-600 font-medium uppercase">{nahkoda}</span>;
         },
+      },
+      {
+        key: 'cooldown_jam',
+        label: 'COOLDOWN KTP',
+        sortable: true,
+        render: (val, row) => (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-sky-50 text-[#0284C7] border border-sky-200">
+            {row.cooldown_jam ?? val ?? 20} Jam
+          </span>
+        ),
       },
       {
         key: 'tujuan_akhir',
@@ -239,11 +278,19 @@ export default function Manifest() {
             onView={handleOpenDetail}
             onEdit={handleOpenEdit}
             onDelete={handleOpenDelete}
+            actions={[
+              {
+                label: 'Cetak Excel (.xlsx)',
+                icon: FileSpreadsheet,
+                onClick: () => handleExportExcel(row),
+                variant: 'emerald',
+              },
+            ]}
           />
         ),
       },
     ],
-    [handleOpenDetail, handleOpenEdit, handleOpenDelete]
+    [handleOpenDetail, handleOpenEdit, handleOpenDelete, handleExportExcel]
   );
 
   return (
@@ -256,10 +303,10 @@ export default function Manifest() {
         <div>
           <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight flex items-center gap-2.5">
             <FileText size={26} className="text-[#0284C7]" />
-            Data Manifest
+            Data Clearance Pelayaran
           </h1>
           <p className="text-xs text-slate-500 mt-1 font-medium">
-            Kelola data manifest clearance dan keberangkatan kapal
+            Kelola data clearance dan keberangkatan kapal
           </p>
         </div>
       </div>
@@ -277,20 +324,20 @@ export default function Manifest() {
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[linear-gradient(90deg,#0284C7_0%,#0EA5E9_100%)] text-white text-xs font-bold shadow-sm hover:opacity-95 active:scale-95 transition-all cursor-pointer"
           >
             <Plus size={15} />
-            <span>Tambah Manifest</span>
+            <span>Tambah Clearance</span>
           </button>
         }
-        emptyMessage="Belum ada data manifest pelayaran"
+        emptyMessage="Belum ada data clearance pelayaran"
       />
 
-      {/* Modal Hapus Manifest */}
+      {/* Modal Hapus Clearance */}
       <DeleteModal
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ isOpen: false, item: null, isLoading: false })}
         onConfirm={handleConfirmDelete}
-        title="Hapus Data Manifest"
-        itemName={deleteModal.item ? `Manifest #${deleteModal.item.id_manifest} - ${deleteModal.item.nama_kapal || deleteModal.item.kapal?.nama_kapal || 'Kapal'}` : ''}
-        message="Apakah Anda yakin ingin menghapus data manifest ini? Seluruh data penumpang terkait manifest ini akan ikut terhapus secara permanen."
+        title="Hapus Data Clearance"
+        itemName={deleteModal.item ? `Clearance #${deleteModal.item.id_clearance || deleteModal.item.id_manifest} - ${deleteModal.item.nama_kapal || deleteModal.item.kapal?.nama_kapal || 'Kapal'}` : ''}
+        message="Apakah Anda yakin ingin menghapus data clearance ini? Seluruh data penumpang terkait clearance ini akan ikut terhapus secara permanen."
         isLoading={deleteModal.isLoading}
       />
     </div>

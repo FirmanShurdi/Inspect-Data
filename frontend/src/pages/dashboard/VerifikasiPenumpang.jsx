@@ -72,7 +72,7 @@ export default function VerifikasiPenumpang() {
     if (isFromCamera) return navigate('/inspeksi', { state: { autoOpen: true } });
     if (fromPath) return navigate(fromPath);
     if (window.history.length > 1) return navigate(-1);
-    navigate('/manifest');
+    navigate('/clearance');
   };
 
   // State
@@ -95,7 +95,7 @@ export default function VerifikasiPenumpang() {
     setLoading(true);
     try {
       const [resM, resP] = await Promise.all([
-        fetch(`/api/manifest/${id}`, { headers }),
+        fetch(`/api/clearance/${id}`, { headers }),
         fetch(`/api/penumpang/manifest/${id}`, { headers }),
       ]);
 

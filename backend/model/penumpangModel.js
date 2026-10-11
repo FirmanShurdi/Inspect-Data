@@ -9,9 +9,18 @@ const penumpang = db.define(
       primaryKey: true,
       autoIncrement: true,
     },
-    id_manifest: {
+    id_clearance: {
       type: DataTypes.INTEGER,
       allowNull: false,
+    },
+    id_manifest: {
+      type: DataTypes.VIRTUAL,
+      get() {
+        return this.getDataValue("id_clearance");
+      },
+      set(value) {
+        this.setDataValue("id_clearance", value);
+      },
     },
     nik: {
       type: DataTypes.STRING(20),
@@ -42,17 +51,13 @@ const penumpang = db.define(
       allowNull: true,
     },
     tipe_penumpang: {
-      type: DataTypes.ENUM("naik", "turun"),
-      defaultValue: "naik",
+      type: DataTypes.STRING(50),
+      defaultValue: "penumpang",
     },
     status_verifikasi: {
       type: DataTypes.ENUM("pending", "selesai"),
       defaultValue: "pending",
       allowNull: false,
-    },
-    status: {
-      type: DataTypes.TEXT,
-      allowNull: true,
     },
   },
   {

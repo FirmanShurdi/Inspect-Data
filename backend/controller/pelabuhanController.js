@@ -97,7 +97,7 @@ const deletePelabuhan = async (req, res) => {
 
     if (!pelabuhanData) return res.status(404).json({ msg: "Data pelabuhan tidak ditemukan" });
 
-    // Cek proteksi relasi dengan tabel manifest (asal, tujuan, sandar, tolak, singgah)
+    // Cek proteksi relasi dengan tabel manifest (asal, tujuan, sandar, tolak)
     const countManifest = await manifest.count({
       where: {
         [Op.or]: [
@@ -105,7 +105,6 @@ const deletePelabuhan = async (req, res) => {
           { id_tujuan_akhir: id },
           { id_sandar: id },
           { id_tolak: id },
-          { id_tempat_singgah: id },
         ],
       },
     });

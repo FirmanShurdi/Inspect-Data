@@ -8,7 +8,7 @@
     "prod": "node ./bin/www"
   },
   "nodemonConfig": {
-    "watch": ["app.js", "bin/www", "routes", "controllers", "models", "middleware", "config", "services"],
+    "watch": ["app.js", "bin/www", "routes", "controller", "model", "controllers", "models", "middleware", "config", "services"],
     "ext": "js,json",
     "legacyWatch": true,
     "ignore": ["node_modules", "public", "uploads", "logs"],

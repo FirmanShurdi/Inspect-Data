@@ -18,7 +18,7 @@ async function loadKapalOptions() {
 
       const [resK, resM] = await Promise.all([
         fetch('/api/kapal?simple=true', { headers }),
-        fetch('/api/manifest/today-active-kapal', { headers }),
+        fetch('/api/clearance/today-active-kapal', { headers }),
       ]);
 
       const dataK = resK.ok ? await resK.json() : null;
@@ -26,21 +26,24 @@ async function loadKapalOptions() {
 
       const kapalList = dataK?.datas || [];
       const rawActiveIds = dataM?.activeKapalIds || [];
+      const kapalClearanceMap = dataM?.kapalClearanceMap || {};
       const activeKapalIds = new Set(rawActiveIds.map((id) => String(id)));
 
       const options = kapalList.map((k) => {
-        const isActive = activeKapalIds.has(String(k.id_kapal));
+        const kIdStr = String(k.id_kapal);
+        const isActive = activeKapalIds.has(kIdStr);
         return {
+          id: k.id_kapal,
           value: k.id_kapal,
           label: k.nama_kapal,
           rawLabel: k.nama_kapal,
+          id_clearance: kapalClearanceMap[kIdStr] || null,
           isActive,
         };
       });
 
-      options.sort((a, b) => (b.isActive ? 1 : 0) - (a.isActive ? 1 : 0));
-
-      return options;
+      const activeOptions = options.filter((o) => o.isActive);
+      return activeOptions;
     } catch (err) {
       console.error('Fetch Kapal Options Error in Camera:', err);
       return [];
@@ -246,58 +249,37 @@ export default function CameraViewfinder({
     // Simpan pemicu buka kamera otomatis jika pengguna menekan tombol Back browser (Desktop/Mobile)
     sessionStorage.setItem('ksop_auto_open_camera_on_back', 'true');
 
-    // 1. Check if active manifest ID is already saved in sessionStorage
-    const activeManifestId = sessionStorage.getItem('ksop_active_manifest_id');
-    const activeKapalId = sessionStorage.getItem('ksop_active_manifest_kapal_id');
-    if (activeManifestId && String(activeKapalId) === String(kapalId)) {
-      navigate(`/manifest/verifikasi/${activeManifestId}`, { state: { from: '/inspeksi', fromCamera: true } });
+    // 1. Check if active clearance ID is already saved in sessionStorage
+    const activeClearanceId = sessionStorage.getItem('ksop_active_clearance_id') || sessionStorage.getItem('ksop_active_manifest_id');
+    const activeKapalId = sessionStorage.getItem('ksop_active_clearance_kapal_id') || sessionStorage.getItem('ksop_active_manifest_kapal_id');
+    if (activeClearanceId && String(activeKapalId) === String(kapalId)) {
+      navigate(`/clearance/verifikasi/${activeClearanceId}`, { state: { from: '/inspeksi', fromCamera: true } });
       return;
     }
 
-    // 2. Check if a manifest already exists in DB for this ship
+    // 2. Check if a clearance already exists in DB for this ship
     try {
       const token = sessionStorage.getItem('token') || localStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const res = await fetch('/api/manifest', { headers });
-      const data = await res.json();
-      if (data?.datas && kapalId) {
-        const found = data.datas.find((m) => String(m.id_kapal) === String(kapalId));
-        if (found?.id_manifest) {
-          sessionStorage.setItem('ksop_active_manifest_id', found.id_manifest);
-          sessionStorage.setItem('ksop_active_manifest_kapal_id', kapalId);
-          navigate(`/manifest/verifikasi/${found.id_manifest}`, { state: { from: '/inspeksi', fromCamera: true } });
-          return;
+      if (kapalId) {
+        const res = await fetch(`/api/clearance/by-kapal/${kapalId}`, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          const foundId = data?.data?.id_clearance || data?.data?.id_manifest;
+          if (foundId) {
+            sessionStorage.setItem('ksop_active_clearance_id', foundId);
+            sessionStorage.setItem('ksop_active_clearance_kapal_id', kapalId);
+            navigate(`/clearance/verifikasi/${foundId}`, { state: { from: '/inspeksi', fromCamera: true } });
+            return;
+          }
         }
-      }
-
-      // 3. If no manifest exists at all for this ship, create one on-demand so we land directly on VerifikasiPenumpang
-      const createRes = await fetch('/api/manifest/store', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...headers,
-        },
-        body: JSON.stringify({
-          id_kapal: kapalId,
-          tanggal_clearance: new Date().toISOString().split('T')[0],
-          pukul_agen_clearance: new Date().toTimeString().split(' ')[0],
-          status_pelayaran: 'Pemeriksaan Penumpang',
-        }),
-      });
-      const createData = await createRes.json();
-      const newId = createData?.data?.id_manifest;
-      if (newId) {
-        sessionStorage.setItem('ksop_active_manifest_id', newId);
-        sessionStorage.setItem('ksop_active_manifest_kapal_id', kapalId);
-        navigate(`/manifest/verifikasi/${newId}`, { state: { from: '/inspeksi', fromCamera: true } });
-        return;
       }
     } catch (e) {
       console.error('Error handling view result navigation:', e);
     }
 
-    navigate('/manifest');
+    navigate('/clearance');
   };
 
   return (

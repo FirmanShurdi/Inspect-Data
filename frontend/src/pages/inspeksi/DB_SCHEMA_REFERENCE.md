@@ -1,28 +1,21 @@
 # 🗄️ HASIL INSPEKSI LIVE DATABASE MYSQL `db_calokapal`
 
-*Dokumen ini diperbarui secara live via query langsung (`SHOW TABLES` & `DESCRIBE`) ke database MySQL localhost.* 
+*Dokumen ini diperbarui secara live via query langsung (`SHOW TABLES` & `DESCRIBE`) ke database MySQL localhost.*
+*Terakhir diperbarui: 8 Oktober 2026*
 
 **Status Koneksi**: 🟢 TERHUBUNG ke `db_calokapal` di `localhost`
 
-## 📊 DAFTAR TABEL DI DATABASE LIVE (17 TABEL)
+## 📊 DAFTAR TABEL DI DATABASE LIVE (15 TABEL)
 
-### 📋 Tabel: `agen` (Total Data: 11 baris)
-| Field | Type | Null | Key | Default | Extra |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `id_agen` | `int` | NO | PRI | null | auto_increment |
-| `nama_agen` | `varchar(255)` | YES | UNI | null | - |
-| `createdAt` | `datetime` | NO | - | null | - |
-| `updatedAt` | `datetime` | NO | - | null | - |
-
-### 📋 Tabel: `asal_kapal` (Total Data: 35 baris)
+### 📋 Tabel: `asal_kapal`
 | Field | Type | Null | Key | Default | Extra |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `id_asal_kapal` | `int` | NO | PRI | null | auto_increment |
-| `nama_asal_kapal` | `varchar(255)` | YES | UNI | null | - |
+| `nama_asal_kapal` | `varchar(255)` | YES | - | null | - |
 | `createdAt` | `datetime` | NO | - | null | - |
 | `updatedAt` | `datetime` | NO | - | null | - |
 
-### 📋 Tabel: `jenis` (Total Data: 11 baris)
+### 📋 Tabel: `jenis`
 | Field | Type | Null | Key | Default | Extra |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `id_jenis` | `int` | NO | PRI | null | auto_increment |
@@ -30,20 +23,20 @@
 | `createdAt` | `datetime` | NO | - | null | - |
 | `updatedAt` | `datetime` | NO | - | null | - |
 
-### 📋 Tabel: `kabupaten` (Total Data: 47 baris)
+### 📋 Tabel: `kabupaten`
 | Field | Type | Null | Key | Default | Extra |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `id_kabupaten` | `int` | NO | PRI | null | auto_increment |
-| `nama_kabupaten` | `varchar(255)` | YES | UNI | null | - |
+| `nama_kabupaten` | `varchar(255)` | YES | - | null | - |
 | `id_provinsi` | `int` | YES | MUL | null | - |
 | `createdAt` | `datetime` | NO | - | null | - |
 | `updatedAt` | `datetime` | NO | - | null | - |
 
-### 📋 Tabel: `kapal` (Total Data: 131 baris)
+### 📋 Tabel: `kapal`
 | Field | Type | Null | Key | Default | Extra |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `id_kapal` | `int` | NO | PRI | null | auto_increment |
-| `nama_kapal` | `varchar(255)` | YES | UNI | null | - |
+| `nama_kapal` | `varchar(255)` | YES | - | null | - |
 | `id_jenis` | `int` | YES | MUL | null | - |
 | `id_bendera` | `int` | YES | MUL | null | - |
 | `gt` | `int` | YES | - | null | - |
@@ -56,16 +49,16 @@
 | `updatedAt` | `datetime` | NO | - | null | - |
 | `id_asal_kapal` | `int` | YES | MUL | null | - |
 
-### 📋 Tabel: `kecamatan` (Total Data: 50 baris)
+### 📋 Tabel: `kecamatan`
 | Field | Type | Null | Key | Default | Extra |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `id_kecamatan` | `int` | NO | PRI | null | auto_increment |
-| `nama_kecamatan` | `varchar(255)` | YES | UNI | null | - |
+| `nama_kecamatan` | `varchar(255)` | YES | - | null | - |
 | `id_kabupaten` | `int` | YES | MUL | null | - |
 | `createdAt` | `datetime` | NO | - | null | - |
 | `updatedAt` | `datetime` | NO | - | null | - |
 
-### 📋 Tabel: `log_aktivitas` (Total Data: 2 baris)
+### 📋 Tabel: `log_aktivitas`
 | Field | Type | Null | Key | Default | Extra |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `id_log` | `int` | NO | PRI | null | auto_increment |
@@ -79,7 +72,7 @@
 | `createdAt` | `datetime` | NO | - | null | - |
 | `updatedAt` | `datetime` | NO | - | null | - |
 
-### 📋 Tabel: `manifest` (Total Data: 2 baris)
+### 📋 Tabel: `manifest`
 | Field | Type | Null | Key | Default | Extra |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `id_manifest` | `int` | NO | PRI | null | auto_increment |
@@ -97,7 +90,6 @@
 | `id_tujuan_akhir` | `int` | YES | MUL | null | - |
 | `id_tolak` | `int` | YES | MUL | null | - |
 | `id_sandar` | `int` | YES | MUL | null | - |
-| `id_agen` | `int` | YES | MUL | null | - |
 | `tanggal_clearance` | `date` | YES | - | null | - |
 | `pukul_agen_clearance` | `time` | YES | - | null | - |
 | `pukul_kapal_berangkat` | `varchar(255)` | YES | - | null | - |
@@ -109,33 +101,34 @@
 | `updatedAt` | `datetime` | NO | - | null | - |
 | `status_pelayaran` | `varchar(100)` | YES | - | TERBIT | - |
 | `id_status_pelayaran` | `int` | YES | MUL | null | - |
+| `cooldown_jam` | `int` | NO | - | 20 | - |
 
-### 📋 Tabel: `nahkoda` (Total Data: 158 baris)
+### 📋 Tabel: `nahkoda`
 | Field | Type | Null | Key | Default | Extra |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `id_nahkoda` | `int` | NO | PRI | null | auto_increment |
-| `nama_nahkoda` | `varchar(255)` | YES | UNI | null | - |
+| `nama_nahkoda` | `varchar(255)` | YES | - | null | - |
 | `createdAt` | `datetime` | NO | - | null | - |
 | `updatedAt` | `datetime` | NO | - | null | - |
 
-### 📋 Tabel: `negara` (Total Data: 1 baris)
+### 📋 Tabel: `negara`
 | Field | Type | Null | Key | Default | Extra |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `id_negara` | `int` | NO | PRI | null | auto_increment |
-| `nama_negara` | `varchar(255)` | YES | UNI | null | - |
-| `kode_negara` | `varchar(255)` | YES | UNI | null | - |
+| `nama_negara` | `varchar(255)` | YES | - | null | - |
+| `kode_negara` | `varchar(255)` | YES | - | null | - |
 | `createdAt` | `datetime` | NO | - | null | - |
 | `updatedAt` | `datetime` | NO | - | null | - |
 
-### 📋 Tabel: `pelabuhan` (Total Data: 12 baris)
+### 📋 Tabel: `pelabuhan`
 | Field | Type | Null | Key | Default | Extra |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `id_pelabuhan` | `int` | NO | PRI | null | auto_increment |
-| `nama_pelabuhan` | `varchar(255)` | YES | UNI | null | - |
+| `nama_pelabuhan` | `varchar(255)` | YES | - | null | - |
 | `createdAt` | `datetime` | NO | - | null | - |
 | `updatedAt` | `datetime` | NO | - | null | - |
 
-### 📋 Tabel: `penumpang` (Total Data: 4 baris)
+### 📋 Tabel: `penumpang`
 | Field | Type | Null | Key | Default | Extra |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `id_penumpang` | `int` | NO | PRI | null | auto_increment |
@@ -151,39 +144,40 @@
 | `status_verifikasi` | `enum('pending','selesai')` | NO | - | pending | - |
 | `createdAt` | `datetime` | NO | - | null | - |
 | `updatedAt` | `datetime` | NO | - | null | - |
+| `status` | `text` | YES | - | null | - |
 
-### 📋 Tabel: `penumpang_anak` (Rancangan Baru - Streamlined)
+### 📋 Tabel: `penumpang_anak`
 | Field | Type | Null | Key | Default | Extra |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `id_anak` | `int` | NO | PRI | null | auto_increment |
 | `id_manifest` | `int` | NO | MUL | null | Foreign Key ke `manifest` |
-| `id_penumpang` | `int` | YES | MUL | null | Foreign Key ke `penumpang` (Boleh NULL jika anak sendiri) |
+| `id_penumpang` | `int` | YES | MUL | null | Foreign Key ke `penumpang` |
 | `nama_anak` | `varchar(255)` | NO | - | null | - |
 | `tanggal_lahir` | `date` | YES | - | null | - |
 | `jenis_kelamin` | `enum('LAKI-LAKI','PEREMPUAN')` | YES | - | LAKI-LAKI | - |
-| `createdAt` | `datetime` | NO | - | null | - |
-| `updatedAt` | `datetime` | NO | - | null | - |
-ALTER TABLE `penumpang_anak` ADD COLUMN `foto` VARCHAR(255) NULL AFTER `jenis_kelamin`;
+| `alamat` | `varchar(255)` | YES | - | null | - |
+| `foto` | `varchar(255)` | YES | - | null | - |
+| `createdAt` | `datetime` | NO | - | CURRENT_TIMESTAMP | - |
+| `updatedAt` | `datetime` | NO | - | CURRENT_TIMESTAMP | - |
 
-### 📋 Tabel: `provinsi` (Total Data: 18 baris)
+### 📋 Tabel: `provinsi`
 | Field | Type | Null | Key | Default | Extra |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `id_provinsi` | `int` | NO | PRI | null | auto_increment |
-| `nama_provinsi` | `varchar(255)` | YES | UNI | null | - |
+| `nama_provinsi` | `varchar(255)` | YES | - | null | - |
 | `id_negara` | `int` | YES | MUL | null | - |
 | `createdAt` | `datetime` | NO | - | null | - |
 | `updatedAt` | `datetime` | NO | - | null | - |
 
-### 📋 Tabel: `spb` (Total Data: 0 baris)
+### 📋 Tabel: `spb`
 | Field | Type | Null | Key | Default | Extra |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `id_spb` | `int` | NO | PRI | null | auto_increment |
-| `no_spb` | `varchar(255)` | YES | - | null | - |
 | `no_spb_asal` | `varchar(255)` | YES | - | null | - |
 | `createdAt` | `datetime` | NO | - | null | - |
 | `updatedAt` | `datetime` | NO | - | null | - |
 
-### 📋 Tabel: `spb_asal` (Total Data: 3 baris)
+### 📋 Tabel: `spb_asal`
 | Field | Type | Null | Key | Default | Extra |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `id_spb_asal` | `int` | NO | PRI | null | auto_increment |
@@ -192,7 +186,7 @@ ALTER TABLE `penumpang_anak` ADD COLUMN `foto` VARCHAR(255) NULL AFTER `jenis_ke
 | `createdAt` | `datetime` | NO | - | null | - |
 | `updatedAt` | `datetime` | NO | - | null | - |
 
-### 📋 Tabel: `status_pelayaran` (Total Data: 3 baris)
+### 📋 Tabel: `status_pelayaran`
 | Field | Type | Null | Key | Default | Extra |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `id_status` | `int` | NO | PRI | null | auto_increment |
@@ -204,7 +198,7 @@ ALTER TABLE `penumpang_anak` ADD COLUMN `foto` VARCHAR(255) NULL AFTER `jenis_ke
 | `createdAt` | `datetime` | NO | - | null | - |
 | `updatedAt` | `datetime` | NO | - | null | - |
 
-### 📋 Tabel: `users` (Total Data: 3 baris)
+### 📋 Tabel: `users`
 | Field | Type | Null | Key | Default | Extra |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `id_user` | `int` | NO | PRI | null | auto_increment |
@@ -219,4 +213,3 @@ ALTER TABLE `penumpang_anak` ADD COLUMN `foto` VARCHAR(255) NULL AFTER `jenis_ke
 | `role` | `enum('user','koordinator','superuser')` | YES | - | null | - |
 | `createdAt` | `datetime` | NO | - | null | - |
 | `updatedAt` | `datetime` | NO | - | null | - |
-

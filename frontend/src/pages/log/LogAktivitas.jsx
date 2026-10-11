@@ -86,12 +86,17 @@ export default function LogAktivitas() {
 
   // Dynamic Options derived from dataList
   const userOptions = useMemo(() => {
-    const set = new Set();
+    const userMap = new Map();
     dataList.forEach((item) => {
-      const name = item.nama_user || item.username;
-      if (name) set.add(name);
+      const name = (item.nama_user || item.username || '').trim();
+      if (name) {
+        const key = name.toLowerCase();
+        if (!userMap.has(key)) {
+          userMap.set(key, name);
+        }
+      }
     });
-    return Array.from(set);
+    return Array.from(userMap.values()).sort((a, b) => a.localeCompare(b));
   }, [dataList]);
 
   const entitasOptions = useMemo(() => {
@@ -105,7 +110,11 @@ export default function LogAktivitas() {
   // Filtered dataset for DataTable
   const filteredData = useMemo(() => {
     return dataList.filter((item) => {
-      if (selectedUser && (item.nama_user || item.username) !== selectedUser) {
+      if (
+        selectedUser &&
+        (item.nama_user || item.username || '').trim().toLowerCase() !==
+          selectedUser.trim().toLowerCase()
+      ) {
         return false;
       }
       if (selectedAksi && !String(item.aksi || '').toUpperCase().includes(selectedAksi.toUpperCase())) {

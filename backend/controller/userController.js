@@ -158,8 +158,12 @@ const updateUser = async (req, res) => {
       if (targetUser.foto) {
         let backendOld = path.join(__dirname, "../public", targetUser.foto);
         let frontendOld = path.join(__dirname, "../../frontend/public", targetUser.foto);
-        if (fs.existsSync(backendOld)) { try { fs.unlinkSync(backendOld); } catch (e) {} }
-        if (fs.existsSync(frontendOld)) { try { fs.unlinkSync(frontendOld); } catch (e) {} }
+        if (req.file.path !== backendOld && fs.existsSync(backendOld)) {
+          try { fs.unlinkSync(backendOld); } catch (e) {}
+        }
+        if (frontendOld !== path.join(__dirname, "../../frontend/public", `images/profil/${req.file.filename}`) && fs.existsSync(frontendOld)) {
+          try { fs.unlinkSync(frontendOld); } catch (e) {}
+        }
       }
       req.body.foto = `images/profil/${req.file.filename}`;
 
@@ -182,6 +186,9 @@ const updateUser = async (req, res) => {
     }
 
     await users.update({ ...req.body }, { where: { id_user: req.params.id } });
+    const updatedUser = await users.findByPk(req.params.id, {
+      attributes: { exclude: ["password"] },
+    });
 
     await recordLog(req, {
       aksi: "UPDATE",
@@ -189,7 +196,7 @@ const updateUser = async (req, res) => {
       keterangan: `Mengubah data pengguna "${targetUser.nama_lengkap || targetUser.username}"`,
     });
 
-    return res.status(200).json({ msg: "Berhasil memperbarui data" });
+    return res.status(200).json({ msg: "Berhasil memperbarui data", data: updatedUser });
   } catch (error) {
     console.error("updateUser Error:", error);
     return res.status(500).json({ msg: error.message || "terjadi kesalahan pada fungsi updateUser" });

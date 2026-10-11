@@ -27,16 +27,16 @@ export default function StatCards() {
         const token = sessionStorage.getItem('token') || localStorage.getItem('token');
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-        const [kapalRes, manifestRes, logRes] = await Promise.all([
+        const [kapalRes, clearanceRes, logRes] = await Promise.all([
           fetch('/api/kapal/all', { headers, signal: controller.signal }).then((r) => r.json()).catch(() => ({})),
-          fetch('/api/manifest/all', { headers, signal: controller.signal }).then((r) => r.json()).catch(() => ({})),
+          fetch('/api/clearance/all', { headers, signal: controller.signal }).then((r) => r.json()).catch(() => ({})),
           fetch('/api/log-aktivitas', { headers, signal: controller.signal }).then((r) => r.json()).catch(() => ({})),
         ]);
         
         if (!isMounted) return;
 
         const kapalList = kapalRes.datas || kapalRes.data || [];
-        const manifestList = manifestRes.datas || manifestRes.data || [];
+        const clearanceList = clearanceRes.datas || clearanceRes.data || [];
         const logList = logRes.datas || logRes.data || [];
 
         const todayStr = new Date().toISOString().split('T')[0];
@@ -47,8 +47,8 @@ export default function StatCards() {
           return new Date(item.createdAt).toISOString().split('T')[0] === todayStr;
         }).length;
 
-        const totalM = manifestList.length;
-        const mNow = manifestList.filter((item) => {
+        const totalC = clearanceList.length;
+        const cNow = clearanceList.filter((item) => {
           if (!item.createdAt) return false;
           return new Date(item.createdAt).toISOString().split('T')[0] === todayStr;
         }).length;
@@ -62,8 +62,8 @@ export default function StatCards() {
         setStatsData({
           totalKapal: totalK,
           kapalNow: kNow,
-          totalManifest: totalM,
-          manifestNow: mNow,
+          totalManifest: totalC,
+          manifestNow: cNow,
           totalInspeksi: totalI,
           inspeksiNow: iNow,
         });
@@ -92,7 +92,7 @@ export default function StatCards() {
       icon: <Ship className="w-6 h-6 text-[#0284C7]" />,
     },
     {
-      label: 'Data Manifest Hari Ini',
+      label: 'Data Clearance Hari Ini',
       value: isLoading ? '...' : statsData.manifestNow,
       today: statsData.totalManifest,
       isTotalBadge: true,

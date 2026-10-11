@@ -17,7 +17,7 @@ import { useSidebar } from '../../context/SidebarContext';
 const NAV_ITEMS_TOP = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
   { name: 'Scan KTP', path: '/inspeksi', icon: QrCode, badge: 'Live' },
-  { name: 'Manifest', path: '/manifest', icon: FileText },
+  { name: 'Clearance', path: '/clearance', icon: FileText },
   { name: 'Kelola User', path: '/users', icon: Users }
 ];
 
@@ -26,7 +26,6 @@ const MASTER_SUB_ITEMS = [
   { name: 'Nahkoda', path: '/master/nahkoda' },
   { name: 'Daerah', path: '/master/daerah' },
   { name: 'Pelabuhan', path: '/master/pelabuhan' },
-  { name: 'SPB Asal', path: '/master/spb-asal' },
 ];
 
 export default function AppSidebar() {
@@ -87,8 +86,8 @@ export default function AppSidebar() {
           </div>
           {isExpanded && (
             <div className="flex flex-col min-w-0">
-              <span className="font-extrabold text-slate-800 text-sm tracking-tight truncate">KSOP INSPEKSI</span>
-              <span className="text-[11px] font-semibold text-[#0284C7] tracking-wider uppercase truncate">Kemenhub RI</span>
+              <span className="font-extrabold text-slate-800 text-sm tracking-tight truncate">SI INSPEKSI</span>
+              <span className="text-[11px] font-semibold text-[#0284C7] tracking-wider uppercase truncate">Sistem Inspeksi Kapal</span>
             </div>
           )}
         </div>

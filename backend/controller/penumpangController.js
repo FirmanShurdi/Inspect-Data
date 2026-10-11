@@ -99,33 +99,148 @@ const deleteImageFile = (filePath) => {
   }
 };
 
+// Helper: Pengecekan NIK Duplikat Kapal, Status Pending di Kapal Lain, dan Masa Tenggang per Manifest (cooldown_jam)
+const validateNikCooldown = async (cleanNik, targetManifestId, excludePassengerId = null) => {
+  if (!cleanNik || String(cleanNik).trim() === "") {
+    return { isDuplicate: false, isSameManifest: false, is12Hours: false, isPending: false, warningMsg: null };
+  }
+  const nikStr = String(cleanNik).trim();
+
+  // 1. Cek Duplikasi pada Manifest Kapal yang Sama
+  const whereSameManifest = { id_clearance: targetManifestId, nik: nikStr };
+  if (excludePassengerId) {
+    whereSameManifest.id_penumpang = { [Op.ne]: excludePassengerId };
+  }
+  const existSameManifest = await penumpang.findOne({ where: whereSameManifest });
+  if (existSameManifest) {
+    return {
+      isDuplicate: true,
+      isSameManifest: true,
+      is12Hours: false,
+      isPending: false,
+      warningMsg: `❌ KTP dengan NIK ${nikStr} sudah terdaftar pada manifest kapal ini!`,
+    };
+  }
+
+  // 2. Cek apakah NIK masih PENDING di manifest LAIN (Belum selesai verifikasi, belum boleh naik kapal lain)
+  const whereOtherPending = {
+    nik: nikStr,
+    id_clearance: { [Op.ne]: targetManifestId },
+    status_verifikasi: "pending",
+  };
+  if (excludePassengerId) {
+    whereOtherPending.id_penumpang = { [Op.ne]: excludePassengerId };
+  }
+
+  const existPendingOther = await penumpang.findOne({
+    where: whereOtherPending,
+    include: [{
+      model: manifest,
+      as: "manifest",
+      include: [{ model: kapal, as: "kapal" }]
+    }],
+    order: [["id_penumpang", "DESC"]],
+  });
+
+  if (existPendingOther) {
+    const kapalNama = existPendingOther.manifest?.kapal?.nama_kapal || "Kapal Lain";
+    return {
+      isDuplicate: true,
+      isSameManifest: false,
+      is12Hours: true,
+      isPending: true,
+      warningMsg: `🔴 PERINGATAN KTP PENDING: NIK ${nikStr} masih berstatus PENDING (belum selesai verifikasi) pada Kapal ${kapalNama}! Harap selesaikan verifikasi terlebih dahulu.`,
+    };
+  }
+
+  // 3. Cek Masa Tenggang (cooldown_jam) dari manifest kapal sebelumnya
+  const whereOtherHistory = {
+    nik: nikStr,
+    id_clearance: { [Op.ne]: targetManifestId },
+  };
+  if (excludePassengerId) {
+    whereOtherHistory.id_penumpang = { [Op.ne]: excludePassengerId };
+  }
+
+  const lastRecordOther = await penumpang.findOne({
+    where: whereOtherHistory,
+    include: [{
+      model: manifest,
+      as: "manifest",
+      include: [{ model: kapal, as: "kapal" }]
+    }],
+    order: [["id_penumpang", "DESC"]],
+  });
+
+  if (lastRecordOther && lastRecordOther.manifest) {
+    const prevManifest = lastRecordOther.manifest;
+    const cooldownHours = (prevManifest.cooldown_jam !== undefined && prevManifest.cooldown_jam !== null)
+      ? Number(prevManifest.cooldown_jam)
+      : 20;
+
+    const createdAtMs = new Date(lastRecordOther.createdAt).getTime();
+    const nowMs = Date.now();
+    const elapsedHours = (nowMs - createdAtMs) / (1000 * 60 * 60);
+
+    if (elapsedHours < cooldownHours) {
+      const kapalNama = prevManifest.kapal?.nama_kapal || "Kapal Lain";
+      const remainingMinutes = Math.round((cooldownHours * 60) - ((nowMs - createdAtMs) / (1000 * 60)));
+      const remHours = Math.floor(remainingMinutes / 60);
+      const remMins = remainingMinutes % 60;
+      const remTimeStr = remHours > 0 ? `${remHours} jam ${remMins} menit` : `${remMins} menit`;
+
+      const diffMinutes = Math.round((nowMs - createdAtMs) / (1000 * 60));
+      const hoursAgo = Math.floor(diffMinutes / 60);
+      const minsAgo = diffMinutes % 60;
+      const timeStr = hoursAgo > 0 ? `${hoursAgo} jam ${minsAgo} menit` : `${minsAgo} menit`;
+
+      return {
+        isDuplicate: true,
+        isSameManifest: false,
+        is12Hours: true,
+        isPending: false,
+        warningMsg: `🔴 PERINGATAN KTP DUPLIKAT: NIK ${nikStr} sudah terdaftar ${timeStr} lalu pada Kapal ${kapalNama}! (Masa Tenggang Manifest: ${cooldownHours} Jam, Sisa: ${remTimeStr})`,
+      };
+    }
+  }
+
+  return { isDuplicate: false, isSameManifest: false, is12Hours: false, isPending: false, warningMsg: null };
+};
+
 // Upload KTP image to public/images/inspeksi/ formatted DD-MM-YY and immediately insert penumpang DB record
 const uploadScanPenumpang = async (req, res) => {
   try {
-    let { id_manifest, foto_base64, nik, nama_penumpang, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat } = req.body;
+    let { id_manifest, id_clearance, id_kapal, foto_base64, nik, nama_penumpang, tempat_lahir, tanggal_lahir, jenis_kelamin, alamat } = req.body;
+    let activeId = id_clearance || id_manifest;
 
-    if (!id_manifest) {
-      return res.status(400).json({ status: false, message: "id_manifest wajib diisi" });
+    if (!activeId && id_kapal) {
+      const foundByKapal = await manifest.findOne({
+        where: { id_kapal },
+        order: [["id_manifest", "DESC"]],
+      });
+      if (foundByKapal) {
+        activeId = foundByKapal.id_manifest;
+      }
     }
+
+    if (!activeId) {
+      // Find the latest clearance overall as safe fallback
+      const latestClr = await manifest.findOne({ order: [["id_manifest", "DESC"]] });
+      if (latestClr) {
+        activeId = latestClr.id_manifest;
+      } else {
+        return res.status(400).json({ status: false, message: "Clearance kapal belum tersedia. Harap buat clearance terlebih dahulu." });
+      }
+    }
+
+    id_manifest = activeId;
 
     // Verifikasi ketersediaan manifest di database
     let targetManifest = await manifest.findByPk(id_manifest);
     if (!targetManifest) {
-      console.warn(`[UPLOAD SCAN] Manifest ID ${id_manifest} tidak ditemukan di DB. Mencari manifest aktif hari ini...`);
-      const todayStr = new Date().toISOString().split("T")[0];
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const todayEnd = new Date();
-      todayEnd.setHours(23, 59, 59, 999);
-
       targetManifest = await manifest.findOne({
-        where: {
-          [Op.or]: [
-            { tanggal_clearance: todayStr },
-            { createdAt: { [Op.gte]: todayStart, [Op.lte]: todayEnd } }
-          ]
-        },
-        order: [["id_manifest", "DESC"]]
+        where: id_kapal ? { id_kapal } : {},
+        order: [["id_manifest", "DESC"]],
       });
 
       if (targetManifest) {
@@ -133,55 +248,15 @@ const uploadScanPenumpang = async (req, res) => {
       } else {
         return res.status(404).json({
           status: false,
-          message: "Manifest tidak ditemukan di database. Harap pilih kapal kembali."
+          message: "Data clearance kapal tidak ditemukan di database. Harap buat clearance terlebih dahulu.",
         });
       }
     }
 
-    // Pengecekan Keamanan Ganda (Anti-Duplikasi Kapal & Masa Tenggang 12 Jam)
-    let duplicateWarningMsg = null;
-    let isDuplicate = false;
-    let isSameManifest = false;
-    let is12Hours = false;
-
+    // Pengecekan Keamanan Ganda (Anti-Duplikasi Kapal, Status Pending, & Masa Tenggang Cooldown per Manifest)
     const cleanNik = nik ? String(nik).trim() : null;
-    if (cleanNik && cleanNik !== "") {
-      // 1. Cek Duplikasi pada Manifest Kapal yang Sama
-      const existInManifest = await penumpang.findOne({
-        where: { id_manifest, nik: cleanNik }
-      });
-      if (existInManifest) {
-        isDuplicate = true;
-        isSameManifest = true;
-        duplicateWarningMsg = `❌ KTP dengan NIK ${cleanNik} sudah terdaftar pada manifest kapal ini!`;
-      } else {
-        // 2. Cek Masa Tenggang 12 Jam Global di Seluruh Kapal
-        const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
-        const exist12Hours = await penumpang.findOne({
-          where: {
-            nik: cleanNik,
-            createdAt: { [Op.gte]: twelveHoursAgo }
-          },
-          include: [{
-            model: manifest,
-            as: "manifest",
-            include: [{ model: kapal, as: "kapal" }]
-          }],
-          order: [["id_penumpang", "DESC"]]
-        });
-
-        if (exist12Hours) {
-          const kapalNama = exist12Hours.manifest?.kapal?.nama_kapal || "Kapal Lain";
-          const diffMinutes = Math.round((Date.now() - new Date(exist12Hours.createdAt).getTime()) / (1000 * 60));
-          const hoursAgo = Math.floor(diffMinutes / 60);
-          const minsAgo = diffMinutes % 60;
-          const timeStr = hoursAgo > 0 ? `${hoursAgo} jam ${minsAgo} menit` : `${minsAgo} menit`;
-          isDuplicate = true;
-          is12Hours = true;
-          duplicateWarningMsg = `🔴 PERINGATAN KTP DUPLIKAT: NIK ${cleanNik} sudah terdaftar ${timeStr} lalu pada Kapal ${kapalNama}! (Masa Tenggang 12 Jam)`;
-        }
-      }
-    }
+    const checkRes = await validateNikCooldown(cleanNik, id_manifest);
+    const { isDuplicate, isSameManifest, is12Hours, warningMsg: duplicateWarningMsg } = checkRes;
 
     let foto_ktp_path = null;
 
@@ -210,8 +285,9 @@ const uploadScanPenumpang = async (req, res) => {
     }
 
     // Immediately insert into penumpang table in database with status 'pending'
+    const targetClearanceId = id_clearance || id_manifest;
     const newRecord = await penumpang.create({
-      id_manifest,
+      id_clearance: targetClearanceId,
       nik: cleanNik,
       nama_penumpang: nama_penumpang ? String(nama_penumpang).trim() : null,
       tempat_lahir: tempat_lahir ? String(tempat_lahir).trim() : null,
@@ -225,11 +301,11 @@ const uploadScanPenumpang = async (req, res) => {
     });
 
     try {
-      const manifestTarget = await manifest.findByPk(id_manifest, {
+      const manifestTarget = await manifest.findByPk(targetClearanceId, {
         include: [{ model: kapal, as: "kapal" }],
       });
       const namaKapal = manifestTarget?.kapal?.nama_kapal || "Kapal";
-      const passengerCount = await penumpang.count({ where: { id_manifest } });
+      const passengerCount = await penumpang.count({ where: { id_clearance: targetClearanceId } });
       const isFirstPassenger = passengerCount === 1;
       const isNamed = nama_penumpang && String(nama_penumpang).trim() !== "";
       const pName = isNamed ? String(nama_penumpang).trim() : "Hasil Scan KTP";
@@ -262,14 +338,14 @@ const uploadScanPenumpang = async (req, res) => {
   }
 };
 
-// Get all passengers by id_manifest with summary count & associated child list
+// Get all passengers by id_manifest / id_clearance with summary count & associated child list
 const getPenumpangByManifest = async (req, res) => {
   try {
-    const { id_manifest } = req.params;
+    const id_clearance = req.params.id_manifest || req.params.id_clearance;
     
     // 1. Fetch adult / parent passengers from penumpang table
     const list = await penumpang.findAll({
-      where: { id_manifest },
+      where: { id_clearance },
       order: [["id_penumpang", "ASC"]],
       include: [
         {
@@ -290,7 +366,7 @@ const getPenumpangByManifest = async (req, res) => {
 
       if (isChildEntry) {
         await penumpangAnak.create({
-          id_manifest: p.id_manifest,
+          id_clearance: p.id_clearance || id_clearance,
           id_penumpang: null,
           nama_anak: p.nama_penumpang || "Anak",
           tanggal_lahir: p.tanggal_lahir,
@@ -298,14 +374,17 @@ const getPenumpangByManifest = async (req, res) => {
         });
         await penumpang.destroy({ where: { id_penumpang: p.id_penumpang } });
       } else {
-        cleanedAdults.push(p);
+        cleanedAdults.push({
+          ...p,
+          id_manifest: p.id_clearance,
+        });
       }
     }
 
     // 2. Fetch standalone children from penumpang_anak table where id_penumpang IS NULL
     const standaloneChildren = await penumpangAnak.findAll({
       where: {
-        id_manifest,
+        id_clearance,
         id_penumpang: null,
       },
       order: [["id_anak", "ASC"]],
@@ -315,7 +394,8 @@ const getPenumpangByManifest = async (req, res) => {
     const formattedChildren = standaloneChildren.map((c) => ({
       id_penumpang: `anak_${c.id_anak}`,
       id_anak: c.id_anak,
-      id_manifest: c.id_manifest,
+      id_clearance: c.id_clearance,
+      id_manifest: c.id_clearance,
       nik: "",
       nama_penumpang: c.nama_anak,
       nama: c.nama_anak,
@@ -426,6 +506,7 @@ const createPenumpang = async (req, res) => {
   try {
     const {
       id_manifest,
+      id_clearance,
       nik,
       nama_penumpang,
       tempat_lahir,
@@ -444,10 +525,12 @@ const createPenumpang = async (req, res) => {
       jenis_kelamin_anak,
     } = req.body;
 
-    if (!id_manifest) {
+    const activeClearanceId = id_clearance || id_manifest;
+
+    if (!activeClearanceId) {
       return res.status(400).json({
         status: false,
-        message: "id_manifest wajib diisi",
+        message: "id_clearance wajib diisi",
       });
     }
 
@@ -465,7 +548,7 @@ const createPenumpang = async (req, res) => {
 
       // Store directly in penumpang_anak table with id_penumpang = NULL
       const newChild = await penumpangAnak.create({
-        id_manifest,
+        id_clearance: activeClearanceId,
         id_penumpang: null,
         nama_anak: nama_penumpang ? String(nama_penumpang).trim() : (nama_anak ? String(nama_anak).trim() : "Anak"),
         tanggal_lahir: normalizeSqlDate(tanggal_lahir || tanggal_lahir_anak),
@@ -475,7 +558,7 @@ const createPenumpang = async (req, res) => {
       });
 
       try {
-        const manifestTarget = await manifest.findByPk(id_manifest, {
+        const manifestTarget = await manifest.findByPk(activeClearanceId, {
           include: [{ model: kapal, as: "kapal" }],
         });
         const namaKapal = manifestTarget?.kapal?.nama_kapal || "Kapal";
@@ -492,7 +575,8 @@ const createPenumpang = async (req, res) => {
       const childResponse = {
         id_penumpang: `anak_${newChild.id_anak}`,
         id_anak: newChild.id_anak,
-        id_manifest: newChild.id_manifest,
+        id_clearance: newChild.id_clearance,
+        id_manifest: newChild.id_clearance,
         nik: "",
         nama_penumpang: newChild.nama_anak,
         nama: newChild.nama_anak,
@@ -516,51 +600,13 @@ const createPenumpang = async (req, res) => {
       });
     }
 
-    // Pengecekan NIK Duplikat Kapal & 12 Jam untuk Penumpang Dewasa
-    let duplicateWarningMsg = null;
-    let isDuplicate = false;
-    let isSameManifest = false;
-    let is12Hours = false;
-
+    // Pengecekan NIK Duplikat Kapal, Status Pending, & Cooldown per Manifest untuk Penumpang Dewasa
     const cleanAdultNik = nik ? String(nik).trim() : null;
-    if (cleanAdultNik && cleanAdultNik !== "") {
-      const existInManifest = await penumpang.findOne({
-        where: { id_manifest, nik: cleanAdultNik }
-      });
-      if (existInManifest) {
-        isDuplicate = true;
-        isSameManifest = true;
-        duplicateWarningMsg = `❌ KTP dengan NIK ${cleanAdultNik} sudah terdaftar pada manifest kapal ini!`;
-      } else {
-        const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
-        const exist12Hours = await penumpang.findOne({
-          where: {
-            nik: cleanAdultNik,
-            createdAt: { [Op.gte]: twelveHoursAgo }
-          },
-          include: [{
-            model: manifest,
-            as: "manifest",
-            include: [{ model: kapal, as: "kapal" }]
-          }],
-          order: [["id_penumpang", "DESC"]]
-        });
-
-        if (exist12Hours) {
-          const kapalNama = exist12Hours.manifest?.kapal?.nama_kapal || "Kapal Lain";
-          const diffMinutes = Math.round((Date.now() - new Date(exist12Hours.createdAt).getTime()) / (1000 * 60));
-          const hoursAgo = Math.floor(diffMinutes / 60);
-          const minsAgo = diffMinutes % 60;
-          const timeStr = hoursAgo > 0 ? `${hoursAgo} jam ${minsAgo} menit` : `${minsAgo} menit`;
-          isDuplicate = true;
-          is12Hours = true;
-          duplicateWarningMsg = `🔴 PERINGATAN KTP DUPLIKAT: NIK ${cleanAdultNik} sudah terdaftar ${timeStr} lalu pada Kapal ${kapalNama}! (Masa Tenggang 12 Jam)`;
-        }
-      }
-    }
+    const checkRes = await validateNikCooldown(cleanAdultNik, activeClearanceId);
+    const { isDuplicate, isSameManifest, is12Hours, warningMsg: duplicateWarningMsg } = checkRes;
 
     const newPenumpang = await penumpang.create({
-      id_manifest,
+      id_clearance: activeClearanceId,
       nik: cleanAdultNik,
       nama_penumpang: nama_penumpang ? String(nama_penumpang).trim() : null,
       tempat_lahir: tempat_lahir ? String(tempat_lahir).trim() : null,
@@ -581,7 +627,7 @@ const createPenumpang = async (req, res) => {
         const childRecords = anakList
           .filter((item) => item && item.namaAnak && String(item.namaAnak).trim() !== "")
           .map((item) => ({
-            id_manifest: newPenumpang.id_manifest,
+            id_clearance: activeClearanceId,
             id_penumpang: newPenumpang.id_penumpang,
             nama_anak: String(item.namaAnak).trim(),
             tanggal_lahir: normalizeSqlDate(item.tanggalLahirAnak),
@@ -593,7 +639,7 @@ const createPenumpang = async (req, res) => {
         }
       } else if (nama_anak && String(nama_anak).trim() !== "") {
         await penumpangAnak.create({
-          id_manifest: newPenumpang.id_manifest,
+          id_clearance: activeClearanceId,
           id_penumpang: newPenumpang.id_penumpang,
           nama_anak: String(nama_anak).trim(),
           tanggal_lahir: normalizeSqlDate(tanggal_lahir_anak),
@@ -608,11 +654,11 @@ const createPenumpang = async (req, res) => {
     });
 
     try {
-      const manifestTarget = await manifest.findByPk(id_manifest, {
+      const manifestTarget = await manifest.findByPk(activeClearanceId, {
         include: [{ model: kapal, as: "kapal" }],
       });
       const namaKapal = manifestTarget?.kapal?.nama_kapal || "Kapal";
-      const passengerCount = await penumpang.count({ where: { id_manifest } });
+      const passengerCount = await penumpang.count({ where: { id_clearance: activeClearanceId } });
       const isFirstPassenger = passengerCount === 1;
       const pName = newPenumpang.nama_penumpang || "Penumpang";
 
@@ -760,7 +806,7 @@ const updatePenumpang = async (req, res) => {
       const childPhotoPath = saveBase64Image(foto_ktp || req.body.foto_base64 || req.body.foto || target.foto_ktp);
 
       const newChild = await penumpangAnak.create({
-        id_manifest: target.id_manifest,
+        id_clearance: target.id_clearance,
         id_penumpang: null,
         nama_anak: nama_penumpang ? String(nama_penumpang).trim() : (target.nama_penumpang || "Anak"),
         tanggal_lahir: normalizeSqlDate(tanggal_lahir || target.tanggal_lahir),
@@ -772,7 +818,7 @@ const updatePenumpang = async (req, res) => {
       await target.destroy();
 
       try {
-        const mTarget = await manifest.findByPk(target.id_manifest, {
+        const mTarget = await manifest.findByPk(target.id_clearance, {
           include: [{ model: kapal, as: "kapal" }],
         });
         const namaKapal = mTarget?.kapal?.nama_kapal || "Kapal";
@@ -791,7 +837,8 @@ const updatePenumpang = async (req, res) => {
         data: {
           id_penumpang: `anak_${newChild.id_anak}`,
           id_anak: newChild.id_anak,
-          id_manifest: newChild.id_manifest,
+          id_clearance: newChild.id_clearance,
+          id_manifest: newChild.id_clearance,
           nik: "",
           nama_penumpang: newChild.nama_anak,
           nama: newChild.nama_anak,
@@ -811,52 +858,9 @@ const updatePenumpang = async (req, res) => {
     }
 
     // Pengecekan NIK Duplikat pada Update Data Penumpang
-    let updateWarningMsg = null;
-    let isDuplicate = false;
-    let isSameManifest = false;
-    let is12Hours = false;
-
     const updateNik = nik !== undefined ? (nik ? String(nik).trim() : null) : target.nik;
-    if (updateNik && updateNik !== "") {
-      const existInManifest = await penumpang.findOne({
-        where: {
-          id_manifest: target.id_manifest,
-          nik: updateNik,
-          id_penumpang: { [Op.ne]: target.id_penumpang }
-        }
-      });
-      if (existInManifest) {
-        isDuplicate = true;
-        isSameManifest = true;
-        updateWarningMsg = `❌ KTP dengan NIK ${updateNik} sudah terdaftar pada manifest kapal ini!`;
-      } else {
-        const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
-        const exist12Hours = await penumpang.findOne({
-          where: {
-            nik: updateNik,
-            id_penumpang: { [Op.ne]: target.id_penumpang },
-            createdAt: { [Op.gte]: twelveHoursAgo }
-          },
-          include: [{
-            model: manifest,
-            as: "manifest",
-            include: [{ model: kapal, as: "kapal" }]
-          }],
-          order: [["id_penumpang", "DESC"]]
-        });
-
-        if (exist12Hours) {
-          const kapalNama = exist12Hours.manifest?.kapal?.nama_kapal || "Kapal Lain";
-          const diffMinutes = Math.round((Date.now() - new Date(exist12Hours.createdAt).getTime()) / (1000 * 60));
-          const hoursAgo = Math.floor(diffMinutes / 60);
-          const minsAgo = diffMinutes % 60;
-          const timeStr = hoursAgo > 0 ? `${hoursAgo} jam ${minsAgo} menit` : `${minsAgo} menit`;
-          isDuplicate = true;
-          is12Hours = true;
-          updateWarningMsg = `🔴 PERINGATAN KTP DUPLIKAT: NIK ${updateNik} sudah terdaftar ${timeStr} lalu pada Kapal ${kapalNama}! (Masa Tenggang 12 Jam)`;
-        }
-      }
-    }
+    const checkRes = await validateNikCooldown(updateNik, target.id_clearance, target.id_penumpang);
+    const { isDuplicate, isSameManifest, is12Hours, warningMsg: updateWarningMsg } = checkRes;
 
     // Update parent passenger fields
     await target.update({
@@ -884,7 +888,7 @@ const updatePenumpang = async (req, res) => {
         const childRecords = anakList
           .filter((item) => item && item.namaAnak && String(item.namaAnak).trim() !== "")
           .map((item) => ({
-            id_manifest: target.id_manifest,
+            id_clearance: target.id_clearance,
             id_penumpang: target.id_penumpang,
             nama_anak: String(item.namaAnak).trim(),
             tanggal_lahir: normalizeSqlDate(item.tanggalLahirAnak || item.tanggal_lahir),
@@ -897,7 +901,7 @@ const updatePenumpang = async (req, res) => {
       } else if (nama_anak && String(nama_anak).trim() !== "") {
         // Single child record fallback
         await penumpangAnak.create({
-          id_manifest: target.id_manifest,
+          id_clearance: target.id_clearance,
           id_penumpang: target.id_penumpang,
           nama_anak: String(nama_anak).trim(),
           tanggal_lahir: normalizeSqlDate(tanggal_lahir_anak),

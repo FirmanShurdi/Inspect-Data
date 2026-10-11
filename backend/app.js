@@ -1,4 +1,4 @@
-  require('dotenv').config();
+require('dotenv').config();
 const createError = require('http-errors');
 const express = require('express');
 const path = require('path');
@@ -13,12 +13,12 @@ require('./model/association');
 const indexRouter = require('./routes/index');
 const authRouter = require('./routes/auth');
 const usersRouter = require('./routes/users');
-const manifestRouter = require('./routes/manifest');
+const clearanceRouter = require('./routes/clearance');
 const inspectionRouter = require('./routes/inspection');
 const kapalRouter = require('./routes/kapal');
 const nahkodaRouter = require('./routes/nahkoda');
 const pelabuhanRouter = require('./routes/pelabuhan');
-const spbAsalRouter = require('./routes/spbAsal');
+
 const negaraRouter = require('./routes/negara');
 const provinsiRouter = require('./routes/provinsi');
 const kabupatenRouter = require('./routes/kabupaten');
@@ -64,20 +64,19 @@ app.get('/api/health', (req, res) => {
 app.use('/api', indexRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
-app.use('/api/manifest', manifestRouter);
+app.use('/api/clearance', clearanceRouter);
+app.use('/api/manifest', clearanceRouter); // alias for backward compatibility
 app.use('/api/inspection', inspectionRouter);
 app.use('/api/kapal', kapalRouter);
 app.use('/api/nahkoda', nahkodaRouter);
 app.use('/api/pelabuhan', pelabuhanRouter);
-app.use('/api/spb-asal', spbAsalRouter);
+
 app.use('/api/negara', negaraRouter);
 app.use('/api/provinsi', provinsiRouter);
 app.use('/api/kabupaten', kabupatenRouter);
 app.use('/api/kecamatan', kecamatanRouter);
 app.use('/api/penumpang', penumpangRouter);
 app.use('/api/log-aktivitas', logAktivitasRouter);
-
-
 
 // Catch 404 and forward to error handler
 app.use(function (req, res, next) {
@@ -88,7 +87,7 @@ app.use(function (req, res, next) {
 app.use(function (err, req, res, next) {
   res.status(err.status || 500).json({
     success: false,
-    message: err.message || 'Internal Server Error',
+    message: err.message,
     error: req.app.get('env') === 'development' ? err : {},
   });
 });

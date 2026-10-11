@@ -35,62 +35,39 @@ export default function MobileInspection() {
     }
   });
 
-  const isCreatingManifestRef = React.useRef(false);
-
-  const ensureManifestExists = async (kapalObj) => {
-    if (!kapalObj) return null;
-    const rawId = kapalObj.id || kapalObj.value || (typeof kapalObj === 'number' || typeof kapalObj === 'string' ? kapalObj : null);
-    const kapalId = Number(rawId);
-    if (!kapalId || isNaN(kapalId)) return null;
-
-    if (isCreatingManifestRef.current) return null;
-    isCreatingManifestRef.current = true;
-
-    try {
-      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
-      const res = await fetch('/api/manifest/store', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          id_kapal: kapalId,
-          tanggal_clearance: new Date().toISOString().split('T')[0],
-          pukul_agen_clearance: new Date().toTimeString().split(' ')[0],
-          status_pelayaran: 'Pemeriksaan Penumpang',
-          is_auto_scan: true,
-        }),
-      });
-
-      const resData = await res.json();
-      const manifestData = resData?.data;
-      const manifestId = manifestData?.id_manifest;
-      if (manifestId) {
-        sessionStorage.setItem('ksop_active_manifest_id', manifestId);
-        sessionStorage.setItem('ksop_active_manifest_kapal_id', kapalId);
-        return manifestId;
-      }
-    } catch (err) {
-      console.error('Error creating auto manifest:', err);
-    } finally {
-      isCreatingManifestRef.current = false;
-    }
-    return null;
-  };
-
-  const handleSelectKapal = (kapalObj) => {
+  const handleSelectKapal = async (kapalObj) => {
     setSelectedKapal(kapalObj);
     if (kapalObj) {
       sessionStorage.setItem('ksop_selected_kapal', JSON.stringify(kapalObj));
-      const kapalId = kapalObj.id || kapalObj.value;
-      const storedKapalId = sessionStorage.getItem('ksop_active_manifest_kapal_id');
-      if (String(storedKapalId) !== String(kapalId)) {
-        sessionStorage.removeItem('ksop_active_manifest_id');
-        sessionStorage.removeItem('ksop_active_manifest_kapal_id');
+      const rawId = kapalObj.id || kapalObj.value;
+      const kapalId = Number(rawId);
+
+      let clearanceId = kapalObj.id_clearance || null;
+      if (!clearanceId && kapalId) {
+        try {
+          const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+          const res = await fetch(`/api/clearance/by-kapal/${kapalId}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          if (res.ok) {
+            const data = await res.json();
+            clearanceId = data?.data?.id_clearance || data?.data?.id_manifest;
+          }
+        } catch (err) {
+          console.error('Error fetching clearance for selected kapal:', err);
+        }
+      }
+
+      if (clearanceId) {
+        sessionStorage.setItem('ksop_active_clearance_id', clearanceId);
+        sessionStorage.setItem('ksop_active_clearance_kapal_id', kapalId);
+        sessionStorage.setItem('ksop_active_manifest_id', clearanceId);
+        sessionStorage.setItem('ksop_active_manifest_kapal_id', kapalId);
       }
     } else {
       sessionStorage.removeItem('ksop_selected_kapal');
+      sessionStorage.removeItem('ksop_active_clearance_id');
+      sessionStorage.removeItem('ksop_active_clearance_kapal_id');
       sessionStorage.removeItem('ksop_active_manifest_id');
       sessionStorage.removeItem('ksop_active_manifest_kapal_id');
     }
@@ -148,21 +125,41 @@ export default function MobileInspection() {
     setIsProcessing(true);
     setProcessingStatus('Merapikan Gambar & Menyiapkan Upload...');
 
-    let activeManifestId = sessionStorage.getItem('ksop_active_manifest_id');
-    if (selectedKapal) {
-      activeManifestId = await ensureManifestExists(selectedKapal);
+    const rawKapalId = selectedKapal?.id || selectedKapal?.value;
+    const kapalId = rawKapalId ? Number(rawKapalId) : null;
+    let activeClearanceId = sessionStorage.getItem('ksop_active_clearance_id') || sessionStorage.getItem('ksop_active_manifest_id') || selectedKapal?.id_clearance;
+
+    if (!activeClearanceId && kapalId) {
+      try {
+        const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+        const res = await fetch(`/api/clearance/by-kapal/${kapalId}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (res.ok) {
+          const d = await res.json();
+          activeClearanceId = d?.data?.id_clearance || d?.data?.id_manifest;
+          if (activeClearanceId) {
+            sessionStorage.setItem('ksop_active_clearance_id', activeClearanceId);
+            sessionStorage.setItem('ksop_active_clearance_kapal_id', kapalId);
+            sessionStorage.setItem('ksop_active_manifest_id', activeClearanceId);
+            sessionStorage.setItem('ksop_active_manifest_kapal_id', kapalId);
+          }
+        }
+      } catch (err) {
+        console.error('Fetch clearance by kapal in capture error:', err);
+      }
     }
 
     try {
       // 1. Preprocess & Crop Image
       const { croppedImage } = await preprocessKTPImage(rawCapturedImage, {
-        kapalNama: selectedKapal?.nama || 'KM SYAHBANDAR KSOP',
+        kapalNama: selectedKapal?.nama || selectedKapal?.label || 'KM SYAHBANDAR KSOP',
       });
       setPreviewImage(croppedImage);
 
       // 2. FAIL-SAFE: Instant Upload to Backend DB (saved to public/images/inspeksi/DD-MM-YY-... + DB Record)
       let savedPenumpangRecord = null;
-      if (activeManifestId) {
+      if (activeClearanceId || kapalId) {
         try {
           const token = sessionStorage.getItem('token') || localStorage.getItem('token');
           const uploadRes = await fetch('/api/penumpang/upload-scan', {
@@ -172,7 +169,9 @@ export default function MobileInspection() {
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
             body: JSON.stringify({
-              id_manifest: activeManifestId,
+              id_clearance: activeClearanceId,
+              id_manifest: activeClearanceId,
+              id_kapal: kapalId,
               foto_base64: croppedImage,
               status_verifikasi: 'pending',
             }),
@@ -245,8 +244,11 @@ export default function MobileInspection() {
   const handleSaveInspection = async (formData) => {
     setIsSaving(true);
     try {
-      const activeManifestId = sessionStorage.getItem('ksop_active_manifest_id');
-      if (activeManifestId) {
+      const rawKapalId = selectedKapal?.id || selectedKapal?.value;
+      const kapalId = rawKapalId ? Number(rawKapalId) : null;
+      const activeClearanceId = sessionStorage.getItem('ksop_active_clearance_id') || sessionStorage.getItem('ksop_active_manifest_id') || selectedKapal?.id_clearance;
+
+      if (activeClearanceId || kapalId) {
         const token = sessionStorage.getItem('token') || localStorage.getItem('token');
         const storeRes = await fetch('/api/penumpang/store', {
           method: 'POST',
@@ -255,7 +257,9 @@ export default function MobileInspection() {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
-            id_manifest: activeManifestId,
+            id_clearance: activeClearanceId,
+            id_manifest: activeClearanceId,
+            id_kapal: kapalId,
             nik: formData.nik,
             nama_penumpang: formData.nama,
             tempat_lahir: formData.tempatLahir,

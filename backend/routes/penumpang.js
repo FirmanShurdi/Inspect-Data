@@ -15,6 +15,7 @@ router.use(verifyToken);
 router.post("/upload-scan", uploadScanPenumpang);
 router.post("/upload", uploadScanPenumpang);
 
+router.get("/clearance/:id_clearance", getPenumpangByManifest);
 router.get("/manifest/:id_manifest", getPenumpangByManifest);
 router.get("/:id", getPenumpangById);
 router.post("/store", createPenumpang);

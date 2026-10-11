@@ -9,9 +9,18 @@ const penumpangAnak = db.define(
       primaryKey: true,
       autoIncrement: true,
     },
-    id_manifest: {
+    id_clearance: {
       type: DataTypes.INTEGER,
       allowNull: false,
+    },
+    id_manifest: {
+      type: DataTypes.VIRTUAL,
+      get() {
+        return this.getDataValue("id_clearance");
+      },
+      set(value) {
+        this.setDataValue("id_clearance", value);
+      },
     },
     id_penumpang: {
       type: DataTypes.INTEGER,
