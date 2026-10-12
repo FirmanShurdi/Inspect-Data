@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, Check, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Upload, Check, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 const wilkerOptions = [
   { value: 'Pusat', label: 'Pusat' },
@@ -155,13 +155,6 @@ export default function EditProfileModal({ user, onClose, onSuccess }) {
               <p className="text-xs text-slate-400">Perbarui identitas dan informasi akun Anda</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-            type="button"
-          >
-            <X size={18} />
-          </button>
         </div>
 
         {/* Error Alert */}

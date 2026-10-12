@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { X, Loader2, UserPlus } from 'lucide-react';
+import { Loader2, UserPlus } from 'lucide-react';
 import Flash from '../notif/flash';
 import Label from '../form/Label';
 import InputField from '../form/InputField';
@@ -44,21 +44,13 @@ export default function FormAction({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Modal */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100 shrink-0">
+        <div className="flex items-center pb-3 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-sky-50 text-[#0284C7] flex items-center justify-center shrink-0">
               <Icon size={18} />
             </div>
             <h3 className="text-base font-extrabold text-slate-800">{title}</h3>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isLoading}
-            className="p-1 rounded-full text-slate-400 hover:bg-slate-100 cursor-pointer outline-none transition-colors"
-          >
-            <X size={18} />
-          </button>
         </div>
 
         {/* Form Container */}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { SidebarProvider, useSidebar } from '../../context/SidebarContext';
+import { UnsavedChangesProvider } from '../../context/UnsavedChangesContext';
 import { useAuth } from '../../context/AuthContext';
 import Flash from '../notif/flash';
 import AppHeader from './AppHeader';
@@ -38,7 +39,9 @@ const LayoutContent = () => {
 export default function AppLayout() {
   return (
     <SidebarProvider>
-      <LayoutContent />
+      <UnsavedChangesProvider>
+        <LayoutContent />
+      </UnsavedChangesProvider>
     </SidebarProvider>
   );
 }

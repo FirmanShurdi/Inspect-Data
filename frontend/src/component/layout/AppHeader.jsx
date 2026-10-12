@@ -117,6 +117,7 @@ export default function AppHeader() {
               {/* Menu items */}
               <button
                 type="button"
+                data-nav-path="/profil"
                 onClick={() => {
                   setShowProfileMenu(false);
                   navigate('/profil');

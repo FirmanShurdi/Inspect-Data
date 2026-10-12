@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Save, ShieldCheck, Ship, MapPin } from 'lucide-react';
 import Flash from '../../component/notif/flash';
 import Label from '../../component/form/Label';
 import InputField from '../../component/form/InputField';
 import Select from '../../component/form/Select';
+import { useUnsavedChanges } from '../../context/UnsavedChangesContext';
 
 const INITIAL_FORM = {
   no_urut: '',
@@ -46,12 +47,38 @@ export default function FormClearance() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Unsaved Changes Tracking Refs
+  const initialSnapshotRef = useRef(null);
+  const isInitialLoadedRef = useRef(false);
+  const isSubmittedRef = useRef(false);
+
   // Dropdown states
   const [options, setOptions] = useState({
     kapal: [],
     nahkoda: [],
     pelabuhan: [],
   });
+
+  // Calculate whether form has unsaved edits
+  const isDirty = Boolean(
+    isInitialLoadedRef.current &&
+    initialSnapshotRef.current &&
+    !isSubmittedRef.current &&
+    JSON.stringify(formData) !== initialSnapshotRef.current
+  );
+
+  // In edit mode or if dirty, protect navigation until submitted
+  const shouldProtectNavigation = Boolean(
+    (isEdit || isDirty) && !isSubmittedRef.current
+  );
+
+  // Initialize snapshot in create mode
+  useEffect(() => {
+    if (!id && !isInitialLoadedRef.current) {
+      initialSnapshotRef.current = JSON.stringify(INITIAL_FORM);
+      isInitialLoadedRef.current = true;
+    }
+  }, [id]);
 
   // Fetch all dropdown options in parallel
   const fetchDropdowns = useCallback(async () => {
@@ -96,13 +123,16 @@ export default function FormClearance() {
       if (res.ok) {
         const resData = await res.json();
         const item = resData.data || resData.datas || resData;
-        setFormData({
+        const loadedForm = {
           ...INITIAL_FORM,
           ...item,
           tanggal_clearance: item.tanggal_clearance?.split('T')[0] || '',
           tanggal_datang: item.tanggal_datang?.split('T')[0] || '',
           tanggal_berangkat: item.tanggal_berangkat?.split('T')[0] || '',
-        });
+        };
+        setFormData(loadedForm);
+        initialSnapshotRef.current = JSON.stringify(loadedForm);
+        isInitialLoadedRef.current = true;
       }
     } catch (err) {
       setToast({ message: 'Gagal mengambil data clearance', type: 'error' });
@@ -130,8 +160,7 @@ export default function FormClearance() {
     });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const processSave = async () => {
     setIsSubmitting(true);
     try {
       const endpoint = isEdit ? `/api/clearance/update/${id}` : '/api/clearance/store';
@@ -145,17 +174,40 @@ export default function FormClearance() {
 
       const resData = await res.json().catch(() => ({}));
       if (res.ok) {
+        isSubmittedRef.current = true;
         setToast({ message: isEdit ? 'Clearance berhasil diperbarui!' : 'Clearance baru berhasil disimpan!', type: 'success' });
-        setTimeout(() => navigate('/clearance'), 1200);
+        return true;
       } else {
         setToast({ message: resData.msg || resData.message || 'Gagal menyimpan data clearance.', type: 'error' });
+        return false;
       }
     } catch (err) {
       setToast({ message: isEdit ? 'Perubahan disimpan.' : 'Data Clearance baru berhasil disiapkan.', type: 'success' });
-      setTimeout(() => navigate('/clearance'), 1200);
+      isSubmittedRef.current = true;
+      return true;
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const { confirmNavigation, clearProtection } = useUnsavedChanges({
+    isBlocked: shouldProtectNavigation,
+    onSave: processSave,
+    title: isEdit ? 'Konfirmasi Keluar Edit Clearance' : 'Konfirmasi Keluar Tambah Clearance',
+    message: 'Anda sedang berada di halaman edit Clearance. Apakah Anda ingin melanjutkan edit, menyimpan data, atau membatalkan edit untuk berpindah halaman?',
+  });
+
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
+    const success = await processSave();
+    if (success) {
+      clearProtection();
+      setTimeout(() => navigate('/clearance'), 800);
+    }
+  };
+
+  const handleBackClick = () => {
+    confirmNavigation('/clearance');
   };
 
   // Formatted options map
@@ -189,7 +241,7 @@ export default function FormClearance() {
         <div className="flex items-center gap-3.5">
           <button
             type="button"
-            onClick={() => navigate('/clearance')}
+            onClick={handleBackClick}
             className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-600 flex items-center justify-center transition-colors cursor-pointer shrink-0"
             title="Kembali ke Clearance"
           >
@@ -298,7 +350,7 @@ export default function FormClearance() {
         <div className="flex items-center justify-end gap-3 pt-2">
           <button
             type="button"
-            onClick={() => navigate('/clearance')}
+            onClick={handleBackClick}
             className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-bold transition-all cursor-pointer"
           >
             Batal
