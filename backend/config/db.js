@@ -8,6 +8,10 @@ const db = new Sequelize(
     host: process.env.DB_HOST || 'localhost',
     dialect: 'mysql',
     logging: console.log, // Enable live SQL query logging (SELECT, INSERT, UPDATE) in terminal
+    define: {
+      charset: 'utf8mb3',
+      collate: 'utf8mb3_general_ci',
+    },
   }
 );
 
