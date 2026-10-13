@@ -1,0 +1,8 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install pustaka python yang dibutuhkan
+COPY sync_nas_upload.py /app/sync_nas_upload.py
+
+CMD ["python", "-u", "sync_nas_upload.py", "--watch", "--source", "/app/upload", "--target", "/app/nas_docker"]

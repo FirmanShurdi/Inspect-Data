@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  nas-uploader:
+    build:
+      context: .
+      dockerfile: Dockerfile.nas-sync
+    container_name: app_nas_uploader
+    volumes:
+      # Mount folder upload lokal ke dalam kontainer
+      - ./upload:/app/upload
+      # Mount volume NAS via CIFS
+      - nas_docker_target:/app/nas_docker
+    restart: always
+
+volumes:
+  nas_docker_target:
+    driver: local
+    driver_opts:
+      type: cifs
+      o: "username=GANTI_USER_NAS,password=GANTI_PASS_NAS,vers=3.0,nofail"
+      device: "//10.10.20.20/docker"
