@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Chart as ChartJS,
   ArcElement,
@@ -15,6 +15,7 @@ export default function InspectionStatusDoughnutChart({
   selectedMonth = null,
   selectedYear = new Date().getFullYear(),
 }) {
+  const [isHovered, setIsHovered] = useState(false);
   // Filter berdasarkan tahun dan (opsional) bulan
   const filteredData = clearanceData.filter((item) => {
     const dateStr = item.tanggal_clearance || item.tanggal_berangkat || item.createdAt;
@@ -75,20 +76,29 @@ export default function InspectionStatusDoughnutChart({
     responsive: true,
     maintainAspectRatio: false,
     cutout: '72%',
+    onHover: (event, activeElements) => {
+      if (activeElements && activeElements.length > 0) {
+        setIsHovered(true);
+      } else {
+        setIsHovered(false);
+      }
+    },
     plugins: {
       legend: {
         display: false,
       },
       tooltip: {
-        backgroundColor: '#FFFFFF',
-        titleColor: '#0F172A',
-        bodyColor: '#475569',
-        borderColor: '#E2E8F0',
+        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+        titleColor: '#FFFFFF',
+        bodyColor: '#E2E8F0',
+        borderColor: '#334155',
         borderWidth: 1,
         titleFont: { size: 12, weight: 'bold' },
         bodyFont: { size: 11 },
         padding: 10,
-        cornerRadius: 10,
+        cornerRadius: 8,
+        displayColors: true,
+        boxPadding: 4,
         callbacks: {
           label: (context) => {
             if (totalManifests === 0) return ' Belum ada data manifest';
@@ -124,10 +134,17 @@ export default function InspectionStatusDoughnutChart({
       </div>
 
       {/* Doughnut Chart with Center Metric */}
-      <div className="relative h-56 sm:h-60 w-full flex items-center justify-center my-2">
+      <div 
+        className="relative h-56 sm:h-60 w-full flex items-center justify-center my-2"
+        onMouseLeave={() => setIsHovered(false)}
+      >
         <Doughnut data={data} options={options} />
-        {/* Center label */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+        {/* Center label (fades out on hover so it never collides with the tooltip) */}
+        <div 
+          className={`absolute inset-0 flex flex-col items-center justify-center pointer-events-none transition-opacity duration-200 ${
+            isHovered ? 'opacity-0' : 'opacity-100'
+          }`}
+        >
           <span className="text-3xl font-black text-slate-800 tracking-tight">
             {totalManifests > 0 ? `${percentComplete}%` : '-'}
           </span>
