@@ -109,16 +109,21 @@ const validateNikCooldown = async (cleanNik, targetManifestId, excludePassengerI
   // 1. Cek Duplikasi pada Manifest Kapal yang Sama
   const whereSameManifest = { id_clearance: targetManifestId, nik: nikStr };
   if (excludePassengerId) {
-    whereSameManifest.id_penumpang = { [Op.ne]: excludePassengerId };
+    whereSameManifest.id_penumpang = { [Op.lt]: excludePassengerId };
   }
-  const existSameManifest = await penumpang.findOne({ where: whereSameManifest });
+  const existSameManifest = await penumpang.findOne({
+    where: whereSameManifest,
+    order: [["id_penumpang", "ASC"]],
+  });
   if (existSameManifest) {
+    const pName = existSameManifest.nama_penumpang ? ` (${existSameManifest.nama_penumpang})` : "";
+    const pStatus = existSameManifest.status_verifikasi === "selesai" ? " (Sudah Selesai Verifikasi)" : " (Pending)";
     return {
       isDuplicate: true,
       isSameManifest: true,
       is12Hours: false,
       isPending: false,
-      warningMsg: `❌ KTP dengan NIK ${nikStr} sudah terdaftar pada manifest kapal ini!`,
+      warningMsg: `DATA SUDAH DIGUNAKAN: NIK ${nikStr}${pName} sudah terdaftar pada manifest kapal ini${pStatus} di data penumpang #${existSameManifest.id_penumpang}!`,
     };
   }
 
@@ -149,7 +154,7 @@ const validateNikCooldown = async (cleanNik, targetManifestId, excludePassengerI
       isSameManifest: false,
       is12Hours: true,
       isPending: true,
-      warningMsg: `🔴 PERINGATAN KTP PENDING: NIK ${nikStr} masih berstatus PENDING (belum selesai verifikasi) pada Kapal ${kapalNama}! Harap selesaikan verifikasi terlebih dahulu.`,
+      warningMsg: `PERINGATAN KTP PENDING: NIK ${nikStr} masih berstatus PENDING (belum selesai verifikasi) pada Kapal ${kapalNama}! Harap selesaikan verifikasi terlebih dahulu.`,
     };
   }
 
@@ -199,7 +204,7 @@ const validateNikCooldown = async (cleanNik, targetManifestId, excludePassengerI
         isSameManifest: false,
         is12Hours: true,
         isPending: false,
-        warningMsg: `🔴 PERINGATAN KTP DUPLIKAT: NIK ${nikStr} sudah terdaftar ${timeStr} lalu pada Kapal ${kapalNama}! (Masa Tenggang Manifest: ${cooldownHours} Jam, Sisa: ${remTimeStr})`,
+        warningMsg: `PERINGATAN KTP DUPLIKAT: NIK ${nikStr} sudah terdaftar ${timeStr} lalu pada Kapal ${kapalNama}! (Masa Tenggang Manifest: ${cooldownHours} Jam, Sisa: ${remTimeStr})`,
       };
     }
   }
@@ -374,8 +379,23 @@ const getPenumpangByManifest = async (req, res) => {
         });
         await penumpang.destroy({ where: { id_penumpang: p.id_penumpang } });
       } else {
+        // Periksa status duplikat / penggunaan NIK secara real-time
+        let currentStatus = p.status || null;
+        if (p.nik && String(p.nik).trim() !== "") {
+          const checkRes = await validateNikCooldown(p.nik, id_clearance, p.id_penumpang);
+          if (checkRes.isDuplicate) {
+            currentStatus = checkRes.warningMsg;
+          } else if (currentStatus && (currentStatus.includes("DUPLIKAT") || currentStatus.includes("sudah terdaftar") || currentStatus.includes("PENDING"))) {
+            currentStatus = null;
+          }
+          if (currentStatus !== p.status) {
+            await penumpang.update({ status: currentStatus }, { where: { id_penumpang: p.id_penumpang } });
+          }
+        }
+
         cleanedAdults.push({
           ...p,
+          status: currentStatus,
           id_manifest: p.id_clearance,
         });
       }
@@ -409,6 +429,7 @@ const getPenumpangByManifest = async (req, res) => {
       status_verifikasi: "selesai",
       kategori_penumpang: "Anak",
       is_anak_only: true,
+      status: null,
       anak_list: [],
     }));
 
@@ -417,6 +438,7 @@ const getPenumpangByManifest = async (req, res) => {
     const total = combinedList.length;
     const countPending = combinedList.filter((p) => p.status_verifikasi === "pending").length;
     const countSelesai = combinedList.filter((p) => p.status_verifikasi === "selesai").length;
+    const countDuplikat = combinedList.filter((p) => Boolean(p.status)).length;
 
     return res.status(200).json({
       status: true,
@@ -425,6 +447,7 @@ const getPenumpangByManifest = async (req, res) => {
         total,
         pending: countPending,
         selesai: countSelesai,
+        duplikat: countDuplikat,
       },
       data: combinedList,
     });
@@ -486,6 +509,15 @@ const getPenumpangById = async (req, res) => {
         status: false,
         message: "Data penumpang tidak ditemukan",
       });
+    }
+
+    if (data.nik && String(data.nik).trim() !== "") {
+      const checkRes = await validateNikCooldown(data.nik, data.id_clearance, data.id_penumpang);
+      if (checkRes.isDuplicate && data.status !== checkRes.warningMsg) {
+        await data.update({ status: checkRes.warningMsg });
+      } else if (!checkRes.isDuplicate && data.status && (data.status.includes("DUPLIKAT") || data.status.includes("sudah terdaftar"))) {
+        await data.update({ status: null });
+      }
     }
 
     return res.status(200).json({
@@ -862,6 +894,16 @@ const updatePenumpang = async (req, res) => {
     const checkRes = await validateNikCooldown(updateNik, target.id_clearance, target.id_penumpang);
     const { isDuplicate, isSameManifest, is12Hours, warningMsg: updateWarningMsg } = checkRes;
 
+    // Tentukan status peringatan duplikat untuk kolom status penumpang
+    let finalStatus = target.status;
+    if (req.body.status !== undefined) {
+      finalStatus = req.body.status;
+    } else if (isDuplicate) {
+      finalStatus = updateWarningMsg;
+    } else if (target.status && (target.status.includes("DUPLIKAT") || target.status.includes("sudah terdaftar") || target.status.includes("PENDING"))) {
+      finalStatus = null;
+    }
+
     // Update parent passenger fields
     await target.update({
       nik: nik !== undefined ? (nik ? String(nik).trim() : null) : target.nik,
@@ -873,7 +915,7 @@ const updatePenumpang = async (req, res) => {
       foto_ktp: (foto_ktp || req.body.foto || req.body.foto_base64) ? (foto_ktp || req.body.foto || req.body.foto_base64) : target.foto_ktp,
       tipe_penumpang: tipe_penumpang !== undefined ? tipe_penumpang : target.tipe_penumpang,
       status_verifikasi: status_verifikasi !== undefined ? status_verifikasi : target.status_verifikasi,
-      status: updateWarningMsg !== null ? updateWarningMsg : target.status,
+      status: finalStatus,
     });
 
     // Sync associated child records in penumpang_anak table for adult passenger

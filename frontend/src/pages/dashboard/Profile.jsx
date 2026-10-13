@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../../context/AuthContext';
-import { User, Mail, Phone, Briefcase, MapPin, ShieldCheck, Edit3, Calendar, CheckCircle2 } from 'lucide-react';
+import { User, Mail, Phone, Briefcase, MapPin, ShieldCheck, Edit3, Calendar, CheckCircle2, X, ZoomIn } from 'lucide-react';
 import EditProfileModal from '../../component/modal/EditProfileModal';
 import Flash from '../../component/notif/flash';
 
@@ -21,6 +22,7 @@ export default function Profile() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const [imgError, setImgError] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     setImgError(false);
@@ -45,7 +47,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto font-sans pb-10">
+    <div className="space-y-6 w-full font-sans pb-10">
       <Flash toast={toast} onClose={() => setToast(null)} />
 
       {/* Page Header */}
@@ -69,18 +71,26 @@ export default function Profile() {
       </div>
 
       {/* Main Profile Card */}
-      <div className="rounded-3xl border border-slate-200/80 bg-white p-6 md:p-8 shadow-xs space-y-8">
+      <div className="rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-6 md:p-8 shadow-xs space-y-6 sm:space-y-8 w-full">
         {/* Top Header Card */}
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 border-b border-dashed border-slate-200 pb-8">
-          <div className="relative h-28 w-28 shrink-0 rounded-full border-4 border-white shadow-xl overflow-hidden bg-gradient-to-tr from-[#0284C7] to-[#0EA5E9] flex items-center justify-center text-white text-3xl font-extrabold select-none">
+          <div
+            onClick={() => photoSrc && !imgError && setLightboxOpen(true)}
+            className={`relative h-28 w-28 shrink-0 rounded-full border-4 border-white shadow-xl overflow-hidden bg-gradient-to-tr from-[#0284C7] to-[#0EA5E9] flex items-center justify-center text-white text-3xl font-extrabold select-none group ${photoSrc && !imgError ? 'cursor-zoom-in' : ''}`}
+          >
             {photoSrc && !imgError ? (
-              <img
-                key={photoSrc}
-                src={photoSrc}
-                alt={user.nama_lengkap || 'User'}
-                className="h-full w-full object-cover"
-                onError={() => setImgError(true)}
-              />
+              <>
+                <img
+                  key={photoSrc}
+                  src={photoSrc}
+                  alt={user.nama_lengkap || 'User'}
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  onError={() => setImgError(true)}
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center">
+                  <ZoomIn size={22} className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 drop-shadow-lg" />
+                </div>
+              </>
             ) : (
               <span>{(user.nama_lengkap || user.username || 'U').charAt(0).toUpperCase()}</span>
             )}
@@ -124,7 +134,7 @@ export default function Profile() {
             <p className="text-xs text-slate-400">Rincian data identitas resmi petugas pelayaran</p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             <DetailCard icon={User} label="Nama Lengkap" value={user.nama_lengkap} />
             <DetailCard icon={User} label="Username" value={user.username} />
             <DetailCard icon={Mail} label="Alamat Email" value={user.email} />
@@ -144,6 +154,36 @@ export default function Profile() {
           onClose={() => setIsEditModalOpen(false)}
           onSuccess={handleProfileUpdated}
         />
+      )}
+
+      {/* Photo Lightbox */}
+      {lightboxOpen && photoSrc && createPortal(
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center"
+          onClick={() => setLightboxOpen(false)}
+          style={{ backgroundColor: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(6px)' }}
+        >
+          <button
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
+          >
+            <X size={20} />
+          </button>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-sm w-full mx-6"
+          >
+            <img
+              src={photoSrc}
+              alt={user.nama_lengkap || 'Foto Profil'}
+              className="w-full rounded-3xl shadow-2xl object-cover border-4 border-white/20"
+            />
+            <p className="text-center text-white/80 text-sm font-semibold mt-4">
+              {user.nama_lengkap || user.username}
+            </p>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

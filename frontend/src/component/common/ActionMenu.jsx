@@ -147,20 +147,7 @@ export default function ActionMenu({
                       : 'text-slate-700 hover:bg-slate-50'
                   }`}
                 >
-                  {Icon && (
-                    <Icon
-                      size={16}
-                      className={`shrink-0 ${
-                        isDanger
-                          ? 'text-rose-500'
-                          : isEdit
-                          ? 'text-amber-500'
-                          : isEmerald
-                          ? 'text-emerald-500'
-                          : 'text-slate-400'
-                      }`}
-                    />
-                  )}
+
                   <span className="truncate">{item.label}</span>
                 </button>
               );

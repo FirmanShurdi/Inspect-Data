@@ -75,7 +75,11 @@ export default function MonthlyClearanceBarChart({
         display: false,
       },
       tooltip: {
-        backgroundColor: '#0F172A',
+        backgroundColor: '#FFFFFF',
+        titleColor: '#0F172A',
+        bodyColor: '#475569',
+        borderColor: '#E2E8F0',
+        borderWidth: 1,
         titleFont: { size: 12, weight: 'bold' },
         bodyFont: { size: 11 },
         padding: 10,

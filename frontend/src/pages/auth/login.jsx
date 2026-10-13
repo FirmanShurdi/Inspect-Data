@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { User, Lock, Unlock, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Flash from '../../component/notif/flash';
-import axiosInstance from '../../api/axiosInstance';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');

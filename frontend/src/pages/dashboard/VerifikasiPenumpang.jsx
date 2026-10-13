@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowLeft, UserCheck, CheckCircle2, Clock } from 'lucide-react';
+import { ArrowLeft, UserCheck, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import ResultCard from '../../component/inspeksi/ResultCard';
 import Flash from '../../component/notif/flash';
 
@@ -151,7 +151,8 @@ export default function VerifikasiPenumpang() {
         });
         setPenumpang((prev) => prev.map((item, i) => (i === idx ? updatedData : item)));
       } else {
-        setToast({ message: 'Gagal menyetujui penumpang', type: 'error' });
+        const errData = await res.json().catch(() => null);
+        setToast({ message: errData?.message || 'Gagal menyetujui penumpang', type: 'error' });
       }
     } catch (err) {
       console.error('Error handleApprove:', err);
@@ -209,13 +210,14 @@ export default function VerifikasiPenumpang() {
   };
 
   // Single-pass Stats Computation
-  const { pendingCount, selesaiCount } = useMemo(() => {
-    let pending = 0, selesai = 0;
+  const { pendingCount, selesaiCount, duplikatCount } = useMemo(() => {
+    let pending = 0, selesai = 0, duplikat = 0;
     for (let i = 0; i < penumpang.length; i++) {
       if (penumpang[i].status_verifikasi === 'pending') pending++;
       else if (penumpang[i].status_verifikasi === 'selesai') selesai++;
+      if (penumpang[i].status) duplikat++;
     }
-    return { pendingCount: pending, selesaiCount: selesai };
+    return { pendingCount: pending, selesaiCount: selesai, duplikatCount: duplikat };
   }, [penumpang]);
 
   const currentP = penumpang[idx];
@@ -264,15 +266,20 @@ export default function VerifikasiPenumpang() {
       </div>
 
       {/* Centered Stats Pill */}
-      <div className="flex justify-center my-0.5">
-        <div className="inline-flex items-center justify-center gap-1.5 bg-white p-1 rounded-2xl border border-slate-200/80 shadow-2xs">
+      <div className="flex justify-center my-0.5 px-2">
+        <div className="inline-flex items-center justify-center gap-1.5 bg-white p-1 rounded-2xl border border-slate-200/80 shadow-2xs flex-wrap max-w-full">
           <span className="px-2.5 py-1 rounded-xl text-slate-600 text-xs font-extrabold">Total: {penumpang.length}</span>
           <span className="px-2.5 py-1 rounded-xl bg-amber-50 text-amber-700 text-xs font-extrabold border border-amber-200 flex items-center gap-1">
-            <Clock size={12} className="animate-pulse" /> Pending: {pendingCount}
+            <Clock size={12} /> Pending: {pendingCount}
           </span>
           <span className="px-2.5 py-1 rounded-xl text-slate-600 text-xs font-extrabold flex items-center gap-1">
             <CheckCircle2 size={12} className="text-[#0284C7]" /> Selesai: {selesaiCount}
           </span>
+          {duplikatCount > 0 && (
+            <span className="px-2.5 py-1 rounded-xl bg-rose-50 text-rose-700 text-xs font-extrabold border border-rose-200 flex items-center gap-1">
+              <AlertTriangle size={12} className="text-rose-600" /> Duplikat: {duplikatCount}
+            </span>
+          )}
         </div>
       </div>
 
@@ -282,7 +289,7 @@ export default function VerifikasiPenumpang() {
           Belum ada data penumpang pada manifest ini.
         </div>
       ) : (
-        <div className="max-w-4xl mx-auto space-y-4">
+        <div className="w-full space-y-4">
           {currentP && (
             <ResultCard
               key={currentP.id_penumpang || idx}

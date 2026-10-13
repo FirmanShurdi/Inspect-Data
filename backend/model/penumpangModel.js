@@ -59,6 +59,10 @@ const penumpang = db.define(
       defaultValue: "pending",
       allowNull: false,
     },
+    status: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
   },
   {
     tableName: "penumpang",

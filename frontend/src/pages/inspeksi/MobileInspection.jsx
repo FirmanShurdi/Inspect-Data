@@ -318,7 +318,7 @@ export default function MobileInspection() {
       {isCameraOpen && (
         <CameraViewfinder
           onCapture={handleCapture}
-          onClose={() => setIsCameraOpen(false)}
+          onClose={handleCloseCamera}
           isProcessing={isProcessing}
           selectedKapal={selectedKapal}
           onSelectKapal={handleSelectKapal}
