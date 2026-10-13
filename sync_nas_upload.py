@@ -16,7 +16,7 @@ if hasattr(sys.stderr, 'reconfigure'):
 # KONFIGURASI PATH DEFAULT & THREADING
 # ==============================================================================
 DEFAULT_SOURCE = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_NAS_TARGET = r"\\10.10.20.20\docker\clearance"
+DEFAULT_NAS_TARGET = r"\\10.10.20.20\docker"
 DEFAULT_LOCAL_TARGET = r"D:\Magang"
 CHECK_INTERVAL = 5 
 NUM_THREADS = 16
@@ -24,7 +24,6 @@ NUM_THREADS = 16
 IGNORE_DIRS = {
     'node_modules',
     '.git',
-    'dist',
     'dist-ssr',
     '.vite',
     '.vscode',
