@@ -122,7 +122,7 @@ export default function DetailClearance() {
   }
 
   const penumpangList = data.penumpang_list || data.penumpangs || [];
-  const verifiedCount = penumpangList.filter(p => p.status_verifikasi === 'verified').length;
+  const verifiedCount = penumpangList.filter(p => p.status_verifikasi === 'selesai' || p.status_verifikasi === 'verified').length;
   const pendingCount = penumpangList.filter(p => p.status_verifikasi === 'pending' || !p.status_verifikasi).length;
 
   return (
@@ -321,7 +321,7 @@ export default function DetailClearance() {
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                 {penumpangList.map((p, idx) => {
-                  const isVerified = p.status_verifikasi === 'verified';
+                  const isVerified = p.status_verifikasi === 'selesai' || p.status_verifikasi === 'verified';
                   const isRejected = p.status_verifikasi === 'rejected';
 
                   return (

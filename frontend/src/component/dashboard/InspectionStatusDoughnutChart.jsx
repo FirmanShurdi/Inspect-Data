@@ -30,13 +30,21 @@ export default function InspectionStatusDoughnutChart({
   let totalPending = 0;
   let totalPaxVerified = 0;
   let totalPaxPending = 0;
+  let totalTanpaPenumpang = 0;
 
   filteredData.forEach((item) => {
     const verified = item.count_selesai || 0;
     const pending = item.count_pending || 0;
-    const totalPax = item.total_penumpang || (verified + pending);
+    const totalPax = item.total_penumpang !== undefined ? item.total_penumpang : (verified + pending);
 
-    if (item.status_inspeksi === 'selesai' || (totalPax > 0 && pending === 0)) {
+    // Manifest tanpa penumpang (misal kapal kargo / belum ada data penumpang)
+    // memiliki status '-' dan tidak ada penumpang yang perlu diaudit / discan.
+    if (totalPax === 0 || item.status_inspeksi === '-') {
+      totalTanpaPenumpang += 1;
+      return;
+    }
+
+    if (item.status_inspeksi === 'selesai' || pending === 0) {
       totalSelesai += 1;
     } else {
       totalPending += 1;
@@ -121,10 +129,10 @@ export default function InspectionStatusDoughnutChart({
         {/* Center label */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <span className="text-3xl font-black text-slate-800 tracking-tight">
-            {percentComplete}%
+            {totalManifests > 0 ? `${percentComplete}%` : '-'}
           </span>
           <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-            Selesai
+            {totalManifests > 0 ? 'Selesai' : 'Belum Ada Data'}
           </span>
         </div>
       </div>
