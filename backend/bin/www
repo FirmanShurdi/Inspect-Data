@@ -1,5 +1,21 @@
 #!/usr/bin/env node
 
+const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
+
+// Auto-install node_modules in Docker/NAS container if missing
+const checkModule = path.join(__dirname, '../node_modules/express');
+if (!fs.existsSync(checkModule)) {
+  console.log('📦 [AUTO-INSTALL] node_modules tidak ditemukan. Menjalankan npm install di dalam container...');
+  try {
+    execSync('npm install --omit=dev', { cwd: path.join(__dirname, '..'), stdio: 'inherit' });
+    console.log('✅ [AUTO-INSTALL] npm install selesai!');
+  } catch (err) {
+    console.error('❌ [AUTO-INSTALL] Gagal menjalankan npm install:', err.message);
+  }
+}
+
 const app = require('../app');
 const debug = require('debug')('backend:server');
 const http = require('http');
