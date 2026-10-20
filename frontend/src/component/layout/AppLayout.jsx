@@ -25,7 +25,7 @@ const LayoutContent = () => {
         }`}
       >
         <AppHeader />
-        <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-screen-2xl w-full mx-auto pb-28">
+        <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-screen-2xl w-full mx-auto pb-24 md:pb-8">
           <Outlet />
         </main>
       </div>

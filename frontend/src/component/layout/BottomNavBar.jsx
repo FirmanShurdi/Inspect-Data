@@ -38,7 +38,7 @@ export default function BottomNavBar() {
   };
 
   return (
-    <div className="fixed bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-40 w-[84%] max-w-[275px] select-none animate-in fade-in slide-in-from-bottom-3 duration-200">
+    <div className="md:hidden fixed bottom-3 left-1/2 -translate-x-1/2 z-40 w-[84%] max-w-[275px] select-none animate-in fade-in slide-in-from-bottom-3 duration-200">
       <nav
         aria-label="Bottom Navigation Bar"
         className="relative bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-full shadow-lg shadow-slate-900/10 px-4 py-1 flex items-center justify-between"
