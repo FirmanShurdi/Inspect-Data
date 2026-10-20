@@ -7,7 +7,7 @@ import Flash from '../notif/flash';
 import AppHeader from './AppHeader';
 import AppSidebar from './AppSidebar';
 import Backdrop from './Backdrop';
-import ScanPopup from '../ui/ScanPopup';
+import BottomNavBar from './BottomNavBar';
 
 const LayoutContent = () => {
   const { isExpanded } = useSidebar();
@@ -30,8 +30,8 @@ const LayoutContent = () => {
         </main>
       </div>
 
-      {/* Floating Scan Camera Button on Bottom Right */}
-      <ScanPopup />
+      {/* Floating Bottom Navigation Bar (Beranda • Scan Kamera • Clearance) */}
+      <BottomNavBar />
     </div>
   );
 };
