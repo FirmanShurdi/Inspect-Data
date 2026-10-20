@@ -38,44 +38,44 @@ export default function BottomNavBar() {
   };
 
   return (
-    <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-sm select-none animate-in fade-in slide-in-from-bottom-4 duration-300">
+    <div className="fixed bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-40 w-[84%] max-w-[275px] select-none animate-in fade-in slide-in-from-bottom-3 duration-200">
       <nav
         aria-label="Bottom Navigation Bar"
-        className="relative bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-full shadow-2xl shadow-slate-900/15 px-6 py-2 flex items-center justify-between"
+        className="relative bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-full shadow-lg shadow-slate-900/10 px-4 py-1 flex items-center justify-between"
       >
         {/* 1. Tombol Pinggir Kiri: Beranda / Dashboard */}
         <button
           type="button"
           onClick={() => navigate('/')}
-          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-2xl transition-all cursor-pointer outline-none group ${
+          className={`flex flex-col items-center justify-center gap-0.5 py-0.5 px-2 rounded-xl transition-all cursor-pointer outline-none group ${
             isHomeActive
               ? 'text-[#0284C7] font-bold scale-105'
               : 'text-slate-400 hover:text-slate-600 font-medium'
           }`}
           title="Beranda / Dashboard"
         >
-          <div className={`p-1.5 rounded-xl transition-all ${isHomeActive ? 'bg-sky-50 text-[#0284C7]' : 'group-hover:bg-slate-100'}`}>
-            <Home size={22} strokeWidth={isHomeActive ? 2.5 : 2} />
+          <div className={`p-1 rounded-lg transition-all ${isHomeActive ? 'bg-sky-50 text-[#0284C7]' : 'group-hover:bg-slate-100'}`}>
+            <Home size={18} strokeWidth={isHomeActive ? 2.5 : 2} />
           </div>
-          <span className="text-[10px] tracking-tight">Beranda</span>
+          <span className="text-[9px] tracking-tight">Beranda</span>
         </button>
 
         {/* 2. Tombol Tengah: Foto / Scan Kamera (Hero Floating Button) */}
-        <div className="relative -mt-6">
+        <div className="relative -mt-3.5">
           <button
             type="button"
             onClick={handleScanClick}
-            className={`w-14 h-14 rounded-full border-4 border-white flex flex-col items-center justify-center transition-all cursor-pointer shadow-lg outline-none active:scale-95 group ${
+            className={`w-11 h-11 rounded-full border-2 border-white flex items-center justify-center transition-all cursor-pointer shadow-md outline-none active:scale-95 group ${
               isScanActive
                 ? 'bg-gradient-to-tr from-[#0284C7] via-[#0EA5E9] to-[#38BDF8] text-white shadow-[#0284C7]/40 ring-2 ring-[#0284C7]/30 scale-105'
                 : 'bg-gradient-to-tr from-[#0284C7] via-[#0EA5E9] to-[#38BDF8] text-white shadow-[#0284C7]/30 hover:scale-105'
             }`}
             title="Buka Kamera Scan KTP"
           >
-            <Camera size={24} strokeWidth={2.2} className="group-hover:scale-110 transition-transform" />
+            <Camera size={19} strokeWidth={2.2} className="group-hover:scale-110 transition-transform" />
           </button>
-          <span className={`block text-center text-[10px] font-bold mt-1 tracking-tight ${isScanActive ? 'text-[#0284C7]' : 'text-slate-500'}`}>
-            Scan KTP
+          <span className={`block text-center text-[9px] font-bold mt-0.5 tracking-tight ${isScanActive ? 'text-[#0284C7]' : 'text-slate-500'}`}>
+            Scan
           </span>
         </div>
 
@@ -83,17 +83,17 @@ export default function BottomNavBar() {
         <button
           type="button"
           onClick={() => navigate('/clearance')}
-          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-2xl transition-all cursor-pointer outline-none group ${
+          className={`flex flex-col items-center justify-center gap-0.5 py-0.5 px-2 rounded-xl transition-all cursor-pointer outline-none group ${
             isClearanceActive
               ? 'text-[#0284C7] font-bold scale-105'
               : 'text-slate-400 hover:text-slate-600 font-medium'
           }`}
           title="Daftar Clearance Kapal"
         >
-          <div className={`p-1.5 rounded-xl transition-all ${isClearanceActive ? 'bg-sky-50 text-[#0284C7]' : 'group-hover:bg-slate-100'}`}>
-            <FileText size={22} strokeWidth={isClearanceActive ? 2.5 : 2} />
+          <div className={`p-1 rounded-lg transition-all ${isClearanceActive ? 'bg-sky-50 text-[#0284C7]' : 'group-hover:bg-slate-100'}`}>
+            <FileText size={18} strokeWidth={isClearanceActive ? 2.5 : 2} />
           </div>
-          <span className="text-[10px] tracking-tight">Clearance</span>
+          <span className="text-[9px] tracking-tight">Clearance</span>
         </button>
       </nav>
     </div>
