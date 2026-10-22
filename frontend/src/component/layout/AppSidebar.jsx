@@ -10,15 +10,16 @@ import {
   Users,
   ChevronLeft,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  X
 } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
 
 const NAV_ITEMS_TOP = [
-  { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-  { name: 'Scan KTP', path: '/inspeksi', icon: QrCode, badge: 'Live' },
-  { name: 'Clearance', path: '/clearance', icon: FileText },
-  { name: 'Kelola User', path: '/users', icon: Users }
+  { name: 'Dashboard', path: '/', icon: LayoutDashboard, hideOnMobile: true },
+  { name: 'Scan KTP', path: '/inspeksi', icon: QrCode, badge: 'Live', hideOnMobile: true },
+  { name: 'Clearance', path: '/clearance', icon: FileText, hideOnMobile: true },
+  { name: 'Kelola User', path: '/users', icon: Users, hideOnMobile: false }
 ];
 
 const MASTER_SUB_ITEMS = [
@@ -47,14 +48,15 @@ export default function AppSidebar() {
     }
   };
 
-  const renderNavLink = ({ name, path, icon: Icon, badge }) => (
+  const renderNavLink = ({ name, path, icon: Icon, badge, hideOnMobile }) => (
     <NavLink
       key={path}
       to={path}
       onClick={() => setIsMobileOpen(false)}
       title={!isExpanded ? name : undefined}
       className={({ isActive }) =>
-        `flex items-center font-medium text-sm transition-all group relative ${isExpanded ? 'w-full gap-3 px-3 py-2.5 rounded-xl justify-start' : 'w-11 h-11 p-0 rounded-xl justify-center shrink-0'
+        `${hideOnMobile ? 'hidden lg:flex' : 'flex'} items-center font-medium text-sm transition-all group relative ${
+          isExpanded ? 'w-full gap-3 px-3 py-2.5 rounded-xl justify-start' : 'w-11 h-11 p-0 rounded-xl justify-center shrink-0'
         } ${isActive
           ? 'bg-gradient-to-r from-[#0284C7] to-[#0EA5E9] text-white shadow-md shadow-[#0284C7]/25 font-semibold'
           : 'text-slate-600 hover:bg-[#E0F2FE]/70 hover:text-[#0284C7]'
@@ -91,6 +93,16 @@ export default function AppSidebar() {
             </div>
           )}
         </div>
+
+        {/* Close Button on Mobile Drawer */}
+        <button
+          type="button"
+          onClick={() => setIsMobileOpen(false)}
+          className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer outline-none"
+          title="Tutup Menu"
+        >
+          <X size={20} />
+        </button>
       </div>
 
       {/* Floating Collapse Button for Desktop */}
@@ -105,6 +117,11 @@ export default function AppSidebar() {
 
       {/* 2. Navigation Items */}
       <div className={`flex-1 py-4 overflow-y-auto space-y-1.5 ${isExpanded ? 'px-3' : 'px-2 flex flex-col items-center'}`}>
+        {/* Label Header Khusus di Drawer Mobile */}
+        <div className="lg:hidden px-3 pt-1 pb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+          Menu Manajemen & Sistem
+        </div>
+
         {/* Main Nav Items */}
         {NAV_ITEMS_TOP.map(renderNavLink)}
 
