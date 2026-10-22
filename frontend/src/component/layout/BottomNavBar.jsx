@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, Camera, FileText, QrCode } from 'lucide-react';
+import { useSidebar } from '../../context/SidebarContext';
 
 export default function BottomNavBar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isMobileOpen } = useSidebar();
   const [isCameraActive, setIsCameraActive] = useState(false);
 
   // Pantau apakah kamera fullscreen sedang aktif di halaman inspeksi
@@ -18,8 +20,8 @@ export default function BottomNavBar() {
     return () => window.removeEventListener('ksop-camera-state', handleCameraState);
   }, []);
 
-  // Jika kamera aktif, sembunyikan navbar agar tidak menutupi tampilan viewfinder
-  if (isCameraActive) return null;
+  // Jika kamera aktif atau menu drawer samping sedang terbuka, sembunyikan navbar
+  if (isCameraActive || isMobileOpen) return null;
 
   const currentPath = location.pathname;
   const isHomeActive = currentPath === '/' || currentPath === '/dashboard';
