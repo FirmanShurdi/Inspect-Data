@@ -4,9 +4,8 @@ import { Listbox } from '@headlessui/react';
 import { ChevronDown, Check, Search } from 'lucide-react';
 
 const getOptionStyle = (opt, active) => {
-  if (opt.isActive) return 'border-2 border-[#0284C7] rounded-none bg-sky-50/90 my-0.5 font-extrabold text-[#0284C7]';
-  if (active) return 'bg-sky-50 text-[#0284C7]';
-  return 'text-slate-700';
+  if (active) return 'bg-sky-50 text-[#0284C7] font-semibold';
+  return 'text-slate-700 hover:bg-slate-50';
 };
 
 export default function CustomSelect({
@@ -152,16 +151,14 @@ export default function CustomSelect({
                   </div>
                 )}
                 {filteredOptions.length === 0 ? (
-                  <div className="py-2.5 px-4 text-xs text-slate-400 font-medium text-center">Tidak ditemukan</div>
+                  <div className="py-3 px-4 text-xs text-slate-400 font-medium text-center">
+                    {search ? 'Pencarian tidak ditemukan' : 'Tidak ada jadwal kapal hari ini'}
+                  </div>
                 ) : (
                   filteredOptions.map((opt, idx) => (
                     <Listbox.Option
                       key={opt.value || idx}
                       value={opt.value}
-                      onTouchStart={() => handleShow(opt.label)}
-                      onTouchEnd={handleHide}
-                      onMouseEnter={() => handleShow(opt.label)}
-                      onMouseLeave={handleHide}
                       className={({ active }) => `relative cursor-pointer select-none py-2.5 pl-9 pr-4 text-left transition-all ${getOptionStyle(opt, active)}`}
                     >
                       {({ selected: isSelected }) => (

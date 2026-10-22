@@ -342,9 +342,9 @@ function HeaderBar({ onClose, hasTorch, isTorchOn, onToggleTorch, kapalOptions, 
           selected={selectedKapal?.id || selectedKapal}
           onChange={(val) => {
             const opt = kapalOptions.find((o) => String(o.value) === String(val));
-            if (opt) onSelectKapal({ id: opt.value, nama: opt.rawLabel || opt.label });
+            if (opt) onSelectKapal({ id: opt.value, nama: opt.rawLabel || opt.label, id_clearance: opt.id_clearance });
           }}
-          placeholder="-- Pilih Kapal --"
+          placeholder="-- Pilih Kapal Hari Ini --"
           searchable={true}
           alignText="center"
           className="w-full text-slate-800"

@@ -311,8 +311,16 @@ const deleteClearance = async (req, res) => {
 
 const getTodayActiveKapalIds = async (req, res) => {
   try {
+    const today = (req.query.date || "").trim() || new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
+
     const activeClearances = await clearance.findAll({
-      attributes: ["id_clearance", "id_kapal", "tanggal_clearance"],
+      attributes: ["id_clearance", "id_kapal", "tanggal_clearance", "tanggal_berangkat"],
+      where: {
+        [Op.or]: [
+          { tanggal_berangkat: today },
+          { tanggal_clearance: today },
+        ],
+      },
       order: [["id_clearance", "DESC"]],
       raw: true,
     });
@@ -332,7 +340,8 @@ const getTodayActiveKapalIds = async (req, res) => {
     }
 
     return res.status(200).json({
-      msg: "Berhasil mengambil kapal aktif",
+      msg: "Berhasil mengambil kapal aktif hari ini",
+      date: today,
       activeKapalIds,
       kapalClearanceMap,
     });
