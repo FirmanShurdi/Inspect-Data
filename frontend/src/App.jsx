@@ -65,6 +65,26 @@ const ProtectedRoute = () => {
   return <Outlet />;
 };
 
+// Role Guard Route to restrict page access based on user role
+const RoleRoute = ({ allowedRoles = [] }) => {
+  const savedUser = sessionStorage.getItem('user') || localStorage.getItem('user');
+  let role = 'user';
+  try {
+    if (savedUser) {
+      const parsed = JSON.parse(savedUser);
+      role = (parsed.role || 'user').toLowerCase();
+    }
+  } catch (e) {
+    role = 'user';
+  }
+
+  if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <Outlet />;
+};
+
 function App() {
   React.useEffect(() => {
     const interceptor = axiosInstance.interceptors.response.use(
@@ -91,10 +111,10 @@ function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route element={<AppLayout />}>
+              {/* Menu Operasional Utama (Dapat diakses oleh semua role: user, koordinator, superuser) */}
               <Route path="/" element={<Dashboard />} />
               <Route path="/profil" element={<Profile />} />
               <Route path="/profile" element={<Profile />} />
-              <Route path="/users" element={<UserManagement />} />
               <Route path="/inspeksi" element={<MobileInspection />} />
 
               {/* Clearance Routes */}
@@ -108,20 +128,28 @@ function App() {
               <Route path="/manifest" element={<Navigate to="/clearance" replace />} />
               <Route path="/manifest/tambah" element={<Navigate to="/clearance/tambah" replace />} />
 
-              <Route path="/nahkoda" element={<NahkodaMaster />} />
-              <Route path="/master/nahkoda" element={<NahkodaMaster />} />
-              <Route path="/pelabuhan" element={<PelabuhanMaster />} />
-              <Route path="/master/pelabuhan" element={<PelabuhanMaster />} />
+              {/* Menu Khusus Admin / Superuser (Kelola User) */}
+              <Route element={<RoleRoute allowedRoles={['superuser']} />}>
+                <Route path="/users" element={<UserManagement />} />
+              </Route>
 
-              <Route path="/daerah" element={<DaerahMaster />} />
-              <Route path="/master/daerah" element={<DaerahMaster />} />
-              <Route path="/negara" element={<DaerahMaster />} />
-              <Route path="/provinsi" element={<DaerahMaster />} />
-              <Route path="/kabupaten" element={<DaerahMaster />} />
-              <Route path="/kecamatan" element={<DaerahMaster />} />
-              <Route path="/log-aktivitas" element={<LogAktivitas />} />
-              <Route path="/master/log-aktivitas" element={<LogAktivitas />} />
-              <Route path="/master/:type" element={<KapalMaster />} />
+              {/* Menu Khusus Koordinator & Admin (Data Master & Log Aktivitas) */}
+              <Route element={<RoleRoute allowedRoles={['superuser', 'koordinator']} />}>
+                <Route path="/nahkoda" element={<NahkodaMaster />} />
+                <Route path="/master/nahkoda" element={<NahkodaMaster />} />
+                <Route path="/pelabuhan" element={<PelabuhanMaster />} />
+                <Route path="/master/pelabuhan" element={<PelabuhanMaster />} />
+
+                <Route path="/daerah" element={<DaerahMaster />} />
+                <Route path="/master/daerah" element={<DaerahMaster />} />
+                <Route path="/negara" element={<DaerahMaster />} />
+                <Route path="/provinsi" element={<DaerahMaster />} />
+                <Route path="/kabupaten" element={<DaerahMaster />} />
+                <Route path="/kecamatan" element={<DaerahMaster />} />
+                <Route path="/log-aktivitas" element={<LogAktivitas />} />
+                <Route path="/master/log-aktivitas" element={<LogAktivitas />} />
+                <Route path="/master/:type" element={<KapalMaster />} />
+              </Route>
             </Route>
           </Route>
 

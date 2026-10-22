@@ -11,16 +11,11 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  X
+  X,
+  ShieldCheck
 } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
-
-const NAV_ITEMS_TOP = [
-  { name: 'Dashboard', path: '/', icon: LayoutDashboard, hideOnMobile: true },
-  { name: 'Scan KTP', path: '/inspeksi', icon: QrCode, badge: 'Live', hideOnMobile: true },
-  { name: 'Clearance', path: '/clearance', icon: FileText, hideOnMobile: true },
-  { name: 'Kelola User', path: '/users', icon: Users, hideOnMobile: false }
-];
+import { useAuth } from '../../context/AuthContext';
 
 const MASTER_SUB_ITEMS = [
   { name: 'Kapal', path: '/master/kapal' },
@@ -31,7 +26,17 @@ const MASTER_SUB_ITEMS = [
 
 export default function AppSidebar() {
   const { isExpanded, setIsExpanded, isMobileOpen, setIsMobileOpen } = useSidebar();
+  const { user } = useAuth();
   const location = useLocation();
+
+  const userRole = (user?.role || 'user').toLowerCase();
+  const isSuperuser = userRole === 'superuser';
+  const isKoordinator = userRole === 'koordinator';
+  const isUserOnly = !isSuperuser && !isKoordinator;
+
+  const canAccessUsers = isSuperuser;
+  const canAccessMasterAndLog = isSuperuser || isKoordinator;
+
   const isMasterActive = location.pathname.startsWith('/master');
   const [isMasterOpen, setIsMasterOpen] = useState(() => isMasterActive);
 
@@ -47,6 +52,20 @@ export default function AppSidebar() {
       setIsMasterOpen((prev) => !prev);
     }
   };
+
+  // Nav Items disesuaikan dengan Role:
+  // - Petugas (user): Dashboard, Scan KTP, Clearance
+  // - Koordinator: Dashboard, Scan KTP, Clearance, Data Master, Log Aktivitas
+  // - Admin (superuser): Semua menu termasuk Kelola User
+  const navItemsTop = [
+    { name: 'Dashboard', path: '/', icon: LayoutDashboard, hideOnMobile: !isUserOnly },
+    { name: 'Scan KTP', path: '/inspeksi', icon: QrCode, badge: 'Live', hideOnMobile: !isUserOnly },
+    { name: 'Clearance', path: '/clearance', icon: FileText, hideOnMobile: !isUserOnly },
+  ];
+
+  if (canAccessUsers) {
+    navItemsTop.push({ name: 'Kelola User', path: '/users', icon: Users, hideOnMobile: false });
+  }
 
   const renderNavLink = ({ name, path, icon: Icon, badge, hideOnMobile }) => (
     <NavLink
@@ -119,56 +138,86 @@ export default function AppSidebar() {
       <div className={`flex-1 py-4 overflow-y-auto space-y-1.5 ${isExpanded ? 'px-3' : 'px-2 flex flex-col items-center'}`}>
         {/* Label Header Khusus di Drawer Mobile */}
         <div className="lg:hidden px-3 pt-1 pb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-          Menu Manajemen & Sistem
+          {canAccessMasterAndLog ? 'Menu Manajemen & Sistem' : 'Menu Utama'}
         </div>
 
         {/* Main Nav Items */}
-        {NAV_ITEMS_TOP.map(renderNavLink)}
+        {navItemsTop.map(renderNavLink)}
 
-        {/* Data Master Dropdown */}
-        <div className={`w-full ${!isExpanded ? 'flex justify-center' : ''}`}>
-          <button
-            type="button"
-            onClick={handleMasterClick}
-            title={!isExpanded ? 'Data Master' : undefined}
-            className={`flex items-center font-medium text-sm transition-all group relative cursor-pointer outline-none ${isExpanded ? 'w-full gap-3 px-3 py-2.5 rounded-xl justify-between' : 'w-11 h-11 p-0 rounded-xl justify-center shrink-0'
-              } ${isMasterActive
-                ? 'bg-sky-50 text-[#0284C7] font-bold border border-sky-200/80 shadow-xs'
-                : 'text-slate-600 hover:bg-[#E0F2FE]/70 hover:text-[#0284C7]'
-              }`}
-          >
-            <Database size={20} className={`shrink-0 transition-transform group-hover:scale-110 ${isMasterActive ? 'text-[#0284C7]' : ''}`} />
-            {isExpanded && <span className="truncate flex-1 text-left">Data Master</span>}
-            {isExpanded && (
-              <ChevronDown
-                size={16}
-                className={`shrink-0 transition-transform duration-200 text-slate-400 ${isMasterOpen ? 'rotate-180 text-[#0284C7]' : ''}`}
-              />
+        {/* Data Master Dropdown (Hanya untuk Koordinator & Superuser) */}
+        {canAccessMasterAndLog && (
+          <div className={`w-full ${!isExpanded ? 'flex justify-center' : ''}`}>
+            <button
+              type="button"
+              onClick={handleMasterClick}
+              title={!isExpanded ? 'Data Master' : undefined}
+              className={`flex items-center font-medium text-sm transition-all group relative cursor-pointer outline-none ${isExpanded ? 'w-full gap-3 px-3 py-2.5 rounded-xl justify-between' : 'w-11 h-11 p-0 rounded-xl justify-center shrink-0'
+                } ${isMasterActive
+                  ? 'bg-sky-50 text-[#0284C7] font-bold border border-sky-200/80 shadow-xs'
+                  : 'text-slate-600 hover:bg-[#E0F2FE]/70 hover:text-[#0284C7]'
+                }`}
+            >
+              <Database size={20} className={`shrink-0 transition-transform group-hover:scale-110 ${isMasterActive ? 'text-[#0284C7]' : ''}`} />
+              {isExpanded && <span className="truncate flex-1 text-left">Data Master</span>}
+              {isExpanded && (
+                <ChevronDown
+                  size={16}
+                  className={`shrink-0 transition-transform duration-200 text-slate-400 ${isMasterOpen ? 'rotate-180 text-[#0284C7]' : ''}`}
+                />
+              )}
+            </button>
+
+            {/* Sub-items Accordion */}
+            {isExpanded && isMasterOpen && (
+              <div className="mt-1 ml-4 pl-3 border-l-2 border-slate-100 space-y-1">
+                {MASTER_SUB_ITEMS.map((sub) => (
+                  <NavLink
+                    key={sub.path}
+                    to={sub.path}
+                    onClick={() => setIsMobileOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-semibold transition-all ${isActive ? 'bg-[#0284C7] text-white shadow-xs font-bold' : 'text-slate-600 hover:bg-sky-50 hover:text-[#0284C7]'
+                      }`
+                    }
+                  >
+                    <span className="truncate">{sub.name}</span>
+                  </NavLink>
+                ))}
+              </div>
             )}
-          </button>
+          </div>
+        )}
 
-          {/* Sub-items Accordion */}
-          {isExpanded && isMasterOpen && (
-            <div className="mt-1 ml-4 pl-3 border-l-2 border-slate-100 space-y-1">
-              {MASTER_SUB_ITEMS.map((sub) => (
-                <NavLink
-                  key={sub.path}
-                  to={sub.path}
-                  onClick={() => setIsMobileOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-semibold transition-all ${isActive ? 'bg-[#0284C7] text-white shadow-xs font-bold' : 'text-slate-600 hover:bg-sky-50 hover:text-[#0284C7]'
-                    }`
-                  }
-                >
-                  <span className="truncate">{sub.name}</span>
-                </NavLink>
-              ))}
+        {/* Log Aktivitas Item (Hanya untuk Koordinator & Superuser) */}
+        {canAccessMasterAndLog && renderNavLink({ name: 'Log Aktivitas', path: '/log-aktivitas', icon: History })}
+      </div>
+
+      {/* 3. Footer: Active Role Badge */}
+      <div className={`p-3 border-t border-slate-100 bg-slate-50/60 ${isExpanded ? '' : 'flex justify-center'}`}>
+        {isExpanded ? (
+          <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-xl bg-white border border-slate-200/80 shadow-xs">
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+              isSuperuser ? 'bg-amber-100 text-amber-600' : isKoordinator ? 'bg-indigo-100 text-indigo-600' : 'bg-sky-100 text-[#0284C7]'
+            }`}>
+              <ShieldCheck size={16} />
             </div>
-          )}
-        </div>
-
-        {/* Log Aktivitas Item */}
-        {renderNavLink({ name: 'Log Aktivitas', path: '/log-aktivitas', icon: History })}
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Akses Role</p>
+              <p className="text-xs font-bold text-slate-700 truncate capitalize">
+                {isSuperuser ? 'Admin (Semua Akses)' : isKoordinator ? 'Koordinator' : 'Petugas Lapangan'}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div
+            title={`Role: ${isSuperuser ? 'Admin' : isKoordinator ? 'Koordinator' : 'Petugas'}`}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+              isSuperuser ? 'bg-amber-100 text-amber-600' : isKoordinator ? 'bg-indigo-100 text-indigo-600' : 'bg-sky-100 text-[#0284C7]'
+            }`}
+          >
+            <ShieldCheck size={18} />
+          </div>
+        )}
       </div>
     </aside>
   );

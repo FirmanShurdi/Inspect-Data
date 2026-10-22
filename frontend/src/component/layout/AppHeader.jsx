@@ -77,8 +77,14 @@ export default function AppHeader() {
               <span className="text-xs font-extrabold text-slate-800 leading-tight truncate max-w-[140px]">
                 {user?.nama_lengkap || user?.username || 'Petugas KSOP'}
               </span>
-              <span className="text-[10px] text-slate-500 font-medium capitalize">
-                {user?.role || user?.jabatan || 'Syahbandar Utama'}
+              <span className="text-[10px] text-slate-500 font-medium">
+                {user?.role === 'superuser'
+                  ? 'Admin'
+                  : user?.role === 'koordinator'
+                  ? 'Koordinator'
+                  : user?.role === 'user'
+                  ? 'Petugas Lapangan'
+                  : user?.jabatan || 'Syahbandar Utama'}
               </span>
             </div>
           </button>
